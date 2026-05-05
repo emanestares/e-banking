@@ -1,0 +1,189 @@
+package com.example.banking.service;
+
+import com.example.banking.dto.TransactionResponse;
+import com.example.banking.dto.TransferRequest;
+import com.example.banking.dto.TransferResponse;
+import com.example.banking.model.Account;
+import com.example.banking.model.Transaction;
+import com.example.banking.repository.AccountRepository;
+import com.example.banking.repository.TransactionRepository;
+import com.example.banking.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class TransactionService {
+
+    @Autowired private TransactionRepository transactionRepository;
+    @Autowired private AccountRepository accountRepository;
+    @Autowired private UserRepository userRepository;
+
+    // -------------------------------------------------------
+    // FUND TRANSFER
+    // -------------------------------------------------------
+    @Transactional
+    public TransferResponse transfer(TransferRequest request, String requestingUsername) {
+
+        if (request.getSenderAccountNumber().equals(request.getReceiverAccountNumber())) {
+            throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+
+        Account sender = accountRepository
+                .findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
+                .orElseThrow(() -> new RuntimeException(
+                        "Sender account not found: " + request.getSenderAccountNumber()));
+
+        Account receiver = accountRepository
+                .findByAccountNumberAndIsActiveTrue(request.getReceiverAccountNumber())
+                .orElseThrow(() -> new RuntimeException(
+                        "Receiver account not found: " + request.getReceiverAccountNumber()));
+
+        // Authorization: sender must belong to requesting user (unless admin)
+        if (!sender.getUser().getUsername().equals(requestingUsername)) {
+            boolean isAdmin = userRepository.findByUsername(requestingUsername)
+                    .map(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN")))
+                    .orElse(false);
+            if (!isAdmin) {
+                throw new AccessDeniedException("You do not own this account");
+            }
+        }
+
+        // Sufficient funds check
+        if (sender.getBalance().compareTo(request.getAmount()) < 0) {
+            throw new IllegalStateException("Insufficient funds. Available: "
+                    + sender.getBalance() + ", Requested: " + request.getAmount());
+        }
+
+        // Debit sender, credit receiver
+        sender.setBalance(sender.getBalance().subtract(request.getAmount()));
+        receiver.setBalance(receiver.getBalance().add(request.getAmount()));
+
+        accountRepository.save(sender);
+        accountRepository.save(receiver);
+
+        // Create transaction record
+        String refNumber = generateReferenceNumber();
+        Transaction txn = Transaction.builder()
+                .referenceNumber(refNumber)
+                .senderAccount(sender)
+                .receiverAccount(receiver)
+                .amount(request.getAmount())
+                .transactionType("TRANSFER")
+                .status("COMPLETED")
+                .description(request.getDescription())
+                .build();
+
+        transactionRepository.save(txn);
+
+        // Build response
+        TransferResponse response = new TransferResponse();
+        response.setReferenceNumber(refNumber);
+        response.setStatus("COMPLETED");
+        response.setAmount(request.getAmount());
+        response.setSenderAccountNumber(sender.getAccountNumber());
+        response.setReceiverAccountNumber(receiver.getAccountNumber());
+        response.setDescription(request.getDescription());
+        response.setTransactionDate(txn.getCreatedAt());
+        response.setNewSenderBalance(sender.getBalance());
+        return response;
+    }
+
+    // -------------------------------------------------------
+    // TRANSACTION HISTORY BY ACCOUNT
+    // -------------------------------------------------------
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> getTransactionsByAccount(
+            String accountNumber, String requestingUsername) {
+
+        Account account = accountRepository.findByAccountNumberAndIsActiveTrue(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Account not found: " + accountNumber));
+
+        // Authorization
+        if (!account.getUser().getUsername().equals(requestingUsername)) {
+            boolean isAdmin = userRepository.findByUsername(requestingUsername)
+                    .map(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN")))
+                    .orElse(false);
+            if (!isAdmin) {
+                throw new AccessDeniedException("Access denied to account: " + accountNumber);
+            }
+        }
+
+        return transactionRepository.findAllByAccountId(account.getId())
+                .stream()
+                .map(t -> mapToResponse(t, account.getId()))
+                .collect(Collectors.toList());
+    }
+
+    // -------------------------------------------------------
+    // ADMIN: ALL TRANSACTIONS
+    // -------------------------------------------------------
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> getAllTransactions() {
+        return transactionRepository.findAllWithDetails()
+                .stream()
+                .map(t -> mapToResponse(t, null))
+                .collect(Collectors.toList());
+    }
+
+    // -------------------------------------------------------
+    // TRANSACTION HISTORY BY USERNAME
+    // -------------------------------------------------------
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> getTransactionsByUsername(String username) {
+        userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        List<Account> accounts = accountRepository.findByUserId(
+                userRepository.findByUsername(username).get().getId());
+
+        if (accounts.isEmpty()) return List.of();
+
+        return transactionRepository.findAllByAccountId(accounts.get(0).getId())
+                .stream()
+                .map(t -> mapToResponse(t, accounts.get(0).getId()))
+                .collect(Collectors.toList());
+    }
+
+    // -------------------------------------------------------
+    // HELPERS
+    // -------------------------------------------------------
+    private String generateReferenceNumber() {
+        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String uuid = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "TXN-" + date + "-" + uuid;
+    }
+
+    private TransactionResponse mapToResponse(Transaction txn, Long perspectiveAccountId) {
+        TransactionResponse resp = new TransactionResponse();
+        resp.setId(txn.getId());
+        resp.setReferenceNumber(txn.getReferenceNumber());
+        resp.setAmount(txn.getAmount());
+        resp.setTransactionType(txn.getTransactionType());
+        resp.setStatus(txn.getStatus());
+        resp.setDescription(txn.getDescription());
+        resp.setCreatedAt(txn.getCreatedAt());
+        resp.setSenderAccountNumber(
+                txn.getSenderAccount() != null ? txn.getSenderAccount().getAccountNumber() : null);
+        resp.setReceiverAccountNumber(
+                txn.getReceiverAccount() != null ? txn.getReceiverAccount().getAccountNumber() : null);
+
+        // Determine DEBIT/CREDIT direction from perspective account
+        if (perspectiveAccountId != null) {
+            if (txn.getSenderAccount() != null
+                    && txn.getSenderAccount().getId().equals(perspectiveAccountId)) {
+                resp.setDirection("DEBIT");
+            } else {
+                resp.setDirection("CREDIT");
+            }
+        }
+        return resp;
+    }
+}
