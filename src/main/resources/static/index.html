@@ -410,19 +410,19 @@
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-inbox"></i> Recipient Information</div>
                 <div class="form-group">
-                  <label>
+                  <label ng-class="{'label-error': transferFieldErrors.receiverAccountNumber}">
                     To Account Number
-                    <!-- Red asterisk shows if the field is flagged by your controller/service error[cite: 1] -->
-                    <span class="text-danger" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
+                    <span class="required-asterisk" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
                   </label>
                   <input type="text"
                          ng-model="transfer.receiverAccountNumber"
                          class="form-control"
                          ng-class="{'is-invalid': transferFieldErrors.receiverAccountNumber}"
-                         placeholder="e.g. ACC-00002"
-                         ng-change="transferFieldErrors.receiverAccountNumber = false">
+                         placeholder="e.g. ACC-00002">
+
+                  <!-- This shows the specific message from your TransferRequest.java -->
                   <small class="text-danger" ng-if="transferFieldErrors.receiverAccountNumber">
-                    Please enter a valid, active account number.
+                    {{transferFieldErrors.receiverAccountNumber}}
                   </small>
                 </div>
               </div>

@@ -271,27 +271,28 @@ angular.module('bankingApp', [])
   $scope.doTransfer = function () {
     $scope.transferError   = null;
     $scope.transferSuccess = null;
+    $scope.transferFieldErrors = {}; // Reset field highlighters
     $scope.transferring    = true;
-    $http.post(API + '/transactions/transfer', $scope.transfer, { headers: authHeaders() })
-      .then(function (res) {
-        $scope.transferSuccess = { message: res.data.message, data: res.data.data };
-        $scope.transfer      = {};
-        $scope.senderBalance = null;
-        loadAccounts();
-        loadTransactions();
-      })
-      .catch(function (err) {
-        // If the backend throws NoSuchElementException, this message
-            // will be "The destination account number does not exist..."
-            $scope.quickTransferError = (err.data && err.data.message) || 'Transfer failed.';
 
-            // If the error specifically mentions the receiver account, highlight that field
-            if (err.data && err.data.message && err.data.message.contains("destination")) {
-                $scope.quickTransferFieldErrors.receiverAccountNumber = true;
+
+    $http.post(API + '/transactions/transfer', $scope.transfer, { headers: authHeaders() })
+          .then(function (res) {
+            $scope.transferSuccess = { message: res.data.message, data: res.data.data };
+            $scope.transfer = {};
+            $scope.senderBalance = null; // Keeps UI consistent[cite: 11]
+            loadAccounts();
+            loadTransactions();
+          })
+          .catch(function (err) {
+            if (err.status === 400 && err.data && err.data.data) {
+                $scope.transferFieldErrors = err.data.data; // Bridges to GlobalExceptionHandler[cite: 10]
+                $scope.transferError = "Please fill in all required fields.";
+            } else {
+                $scope.transferError = (err.data && err.data.message) || 'Transfer failed.';
             }
-      })
-      .finally(function () { $scope.transferring = false; });
-  };
+          })
+          .finally(function () { $scope.transferring = false; });
+    };
 
   $scope.clearTransfer = function () {
     $scope.transfer        = {};
