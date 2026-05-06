@@ -27,8 +27,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Account is disabled: " + username);
         }
 
+        // Normalize role names: always ensure authority starts with ROLE_
+        // This handles both "ROLE_ADMIN" and bare "ADMIN" stored in the DB
         var authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .map(role -> {
+                    String name = role.getName();
+                    if (!name.startsWith("ROLE_")) {
+                        name = "ROLE_" + name;
+                    }
+                    return new SimpleGrantedAuthority(name);
+                })
                 .collect(Collectors.toSet());
 
         return org.springframework.security.core.userdetails.User.builder()
