@@ -3,407 +3,469 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexaBank – Online Banking</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>E-Banking – Online Banking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body ng-controller="AppController">
 
-  <!-- LOGIN SCREEN -->
-  <div class="login-screen" ng-if="!isLoggedIn && !showSignup">
-    <div class="login-brand">
-      <div class="brand-logo"><i class="fas fa-university"></i></div>
-      <h1>NexaBank</h1>
-      <p>Secure Online Banking</p>
+<!-- LOGIN SCREEN -->
+<div class="login-screen" ng-if="!isLoggedIn && !showSignup">
+  <div class="login-brand">
+    <div class="brand-logo"><i class="fas fa-university"></i></div>
+    <h1>E-Banking</h1>
+    <p>Premium Online Banking</p>
+  </div>
+  <div class="login-card">
+    <h2>Welcome Back</h2>
+    <p class="login-subtitle">Sign in to your account</p>
+    <div class="alert alert-danger" ng-if="loginError">
+      <i class="fas fa-exclamation-circle"></i> {{ loginError }}
     </div>
-    <div class="login-card">
-      <h2>Welcome Back</h2>
-      <p class="login-subtitle">Sign in to your account</p>
-      <div class="alert alert-danger" ng-if="loginError">
-        <i class="fas fa-exclamation-circle"></i> {{ loginError }}
+    <form ng-submit="login()" novalidate>
+      <div class="form-group">
+        <label><i class="fas fa-user"></i>&nbsp; Username</label>
+        <input type="text" ng-model="credentials.username" placeholder="Enter your username" class="form-control" required>
       </div>
-      <form ng-submit="login()" novalidate>
-        <div class="form-group">
-          <label><i class="fas fa-user"></i> Username</label>
-          <input type="text" ng-model="credentials.username" placeholder="Enter your username" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-lock"></i> Password</label>
-          <input type="password" ng-model="credentials.password" placeholder="Enter your password" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" ng-disabled="loading">
-          <span ng-if="!loading"><i class="fas fa-sign-in-alt"></i> Sign In</span>
-          <span ng-if="loading"><i class="fas fa-spinner fa-spin"></i> Signing in...</span>
-        </button>
-      </form>
-      <div class="login-footer">
-        <a href="#" ng-click="goToSignup()"><i class="fas fa-user-plus"></i> Create Account</a>
-        <span class="divider">|</span>
-        <a href="#"><i class="fas fa-headset"></i> Contact Support</a>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i>&nbsp; Password</label>
+        <input type="password" ng-model="credentials.password" placeholder="Enter your password" class="form-control" required>
       </div>
-    </div>
-    <div class="login-info">
-      <i class="fas fa-shield-alt"></i> 256-bit SSL Encrypted &bull; Secured by NexaBank
+      <button type="submit" class="btn btn-primary btn-block" ng-disabled="loading" style="margin-top:.5rem">
+        <span ng-if="!loading"><i class="fas fa-arrow-right-to-bracket"></i> Sign In</span>
+        <span ng-if="loading"><i class="fas fa-spinner fa-spin"></i> Signing in...</span>
+      </button>
+    </form>
+    <div class="login-footer">
+      <a href="#" ng-click="goToSignup()"><i class="fas fa-user-plus"></i> Create Account</a>
+      <span class="divider">|</span>
+      <a href="#"><i class="fas fa-headset"></i> Support</a>
     </div>
   </div>
+  <div class="login-info">
+    <i class="fas fa-shield-halved"></i>&nbsp; 256-bit SSL Encrypted &bull; Secured by E-Banking
+  </div>
+</div>
 
-  <!-- SIGNUP SCREEN -->
-  <div class="login-screen" ng-if="!isLoggedIn && showSignup">
-    <div class="login-brand">
-      <div class="brand-logo"><i class="fas fa-university"></i></div>
-      <h1>NexaBank</h1>
-      <p>Secure Online Banking</p>
+<!-- SIGNUP SCREEN -->
+<div class="login-screen" ng-if="!isLoggedIn && showSignup">
+  <div class="login-brand">
+    <div class="brand-logo"><i class="fas fa-university"></i></div>
+    <h1>E-Banking</h1>
+    <p>Premium Online Banking</p>
+  </div>
+  <div class="login-card" style="max-width:480px">
+    <h2>Create Account</h2>
+    <p class="login-subtitle">Open your E-Banking account today</p>
+    <div class="alert alert-danger" ng-if="signupError">
+      <i class="fas fa-exclamation-circle"></i> {{ signupError }}
     </div>
-
-    <div class="login-card" style="max-width:480px">
-      <h2>Create Account</h2>
-      <p class="login-subtitle">Open your NexaBank account today</p>
-
-      <div class="alert alert-danger" ng-if="signupError">
-        <i class="fas fa-exclamation-circle"></i> {{ signupError }}
+    <form ng-submit="signup()" novalidate>
+      <div class="form-group">
+        <label><i class="fas fa-id-card"></i>&nbsp; Full Name</label>
+        <input type="text" ng-model="signupData.fullName" placeholder="e.g. Juan dela Cruz" class="form-control" required>
       </div>
-
-      <form name="signupForm" ng-submit="signup()" novalidate>
-
-        <!-- Full Name -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-id-card"></i> Full Name
-            <span class="required"
-                  ng-if="signupForm.fullName.$invalid && signupForm.fullName.$touched">*</span>
-          </label>
-          <input name="fullName"
-                 type="text"
-                 ng-model="signupData.fullName"
-                 placeholder="e.g. Juan dela Cruz"
-                 class="form-control"
-                 required>
-        </div>
-
-        <!-- Username -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-user"></i> Username
-            <span class="required"
-                  ng-if="signupForm.username.$invalid && signupForm.username.$touched">*</span>
-          </label>
-          <input name="username"
-                 type="text"
-                 ng-model="signupData.username"
-                 placeholder="Choose a username"
-                 class="form-control"
-                 required>
-        </div>
-
-        <!-- Email -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-envelope"></i> Email
-            <span class="required"
-                  ng-if="signupForm.email.$invalid && signupForm.email.$touched">*</span>
-          </label>
-          <input name="email"
-                 type="email"
-                 ng-model="signupData.email"
-                 placeholder="your@email.com"
-                 class="form-control"
-                 required>
-        </div>
-
-        <!-- Password -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-lock"></i> Password
-            <span class="required"
-                  ng-if="signupForm.password.$invalid && signupForm.password.$touched">*</span>
-          </label>
-          <input name="password"
-                 type="password"
-                 ng-model="signupData.password"
-                 placeholder="At least 6 characters"
-                 class="form-control"
-                 required>
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-lock"></i> Confirm Password
-            <span class="required"
-                  ng-if="signupForm.confirmPassword.$invalid && signupForm.confirmPassword.$touched">*</span>
-          </label>
-          <input name="confirmPassword"
-                 type="password"
-                 ng-model="signupData.confirmPassword"
-                 placeholder="Repeat your password"
-                 class="form-control"
-                 required>
-        </div>
-
-        <!-- Initial Deposit -->
-        <div class="form-group">
-          <label>
-            <i class="fas fa-coins"></i> Initial Deposit (₱)
-            <span style="color:var(--gray-400);font-weight:400">(optional)</span>
-          </label>
-          <input type="number"
-                 ng-model="signupData.initialDeposit"
-                 placeholder="0.00"
-                 class="form-control"
-                 min="0"
-                 step="0.01">
-        </div>
-
-        <!-- Submit -->
-        <button type="submit"
-                class="btn btn-primary btn-block"
-                ng-disabled="signupLoading">
-        <span ng-if="!signupLoading">
-          <i class="fas fa-user-plus"></i> Create Account
-        </span>
-          <span ng-if="signupLoading">
-          <i class="fas fa-spinner fa-spin"></i> Creating account...
-        </span>
-        </button>
-
-      </form>
-
-      <div class="login-footer">
-        <a href="#" ng-click="goToLogin()">
-          <i class="fas fa-arrow-left"></i> Back to Sign In
-        </a>
+      <div class="form-group">
+        <label><i class="fas fa-user"></i>&nbsp; Username</label>
+        <input type="text" ng-model="signupData.username" placeholder="Choose a username" class="form-control" required>
       </div>
-    </div>
-
-    <div class="login-info">
-      <i class="fas fa-shield-alt"></i>
-      256-bit SSL Encrypted • Secured by NexaBank
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i>&nbsp; Email</label>
+        <input type="email" ng-model="signupData.email" placeholder="your@email.com" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i>&nbsp; Password</label>
+        <input type="password" ng-model="signupData.password" placeholder="At least 6 characters" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i>&nbsp; Confirm Password</label>
+        <input type="password" ng-model="signupData.confirmPassword" placeholder="Repeat your password" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-coins"></i>&nbsp; Initial Deposit (&#8369;) <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+        <input type="number" ng-model="signupData.initialDeposit" placeholder="0.00" class="form-control" min="0" step="0.01">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" ng-disabled="signupLoading" style="margin-top:.5rem">
+        <span ng-if="!signupLoading"><i class="fas fa-user-plus"></i> Create Account</span>
+        <span ng-if="signupLoading"><i class="fas fa-spinner fa-spin"></i> Creating account...</span>
+      </button>
+    </form>
+    <div class="login-footer">
+      <a href="#" ng-click="goToLogin()"><i class="fas fa-arrow-left"></i> Back to Sign In</a>
     </div>
   </div>
+  <div class="login-info">
+    <i class="fas fa-shield-halved"></i>&nbsp; 256-bit SSL Encrypted &bull; Secured by E-Banking
+  </div>
+</div>
 
-  <!-- APP SHELL -->
-  <div class="app-shell" ng-if="isLoggedIn">
-    <aside class="sidebar" ng-class="{'sidebar-collapsed': sidebarCollapsed}">
-      <div class="sidebar-header">
-        <div class="brand"><i class="fas fa-university"></i><span class="brand-name">NexaBank</span></div>
-        <button class="sidebar-toggle" ng-click="toggleSidebar()"><i class="fas fa-bars"></i></button>
+<!-- APP SHELL -->
+<div class="app-shell" ng-if="isLoggedIn">
+  <aside class="sidebar" ng-class="{'sidebar-collapsed': sidebarCollapsed}">
+    <div class="sidebar-header">
+      <div class="brand"><i class="fas fa-university"></i><span class="brand-name">E-Banking</span></div>
+      <button class="sidebar-toggle" ng-click="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ currentUser.fullName | limitTo:1 }}</div>
+      <div class="user-info" ng-if="!sidebarCollapsed">
+        <div class="user-name">{{ currentUser.fullName }}</div>
+        <div class="user-role">{{ currentUser.roles[0] === 'ROLE_ADMIN' ? 'Administrator' : 'Member' }}</div>
       </div>
-      <div class="sidebar-user">
-        <div class="user-avatar">{{ currentUser.fullName | limitTo:1 }}</div>
-        <div class="user-info" ng-if="!sidebarCollapsed">
-          <div class="user-name">{{ currentUser.fullName }}</div>
-          <div class="user-role">{{ currentUser.roles[0] === 'ROLE_ADMIN' ? 'Administrator' : 'User' }}</div>
-        </div>
+    </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li ng-class="{active: currentPage==='dashboard'}"><a ng-click="navigate('dashboard')"><i class="fas fa-gauge-high"></i><span>Dashboard</span></a></li>
+        <li ng-class="{active: currentPage==='accounts'}"><a ng-click="navigate('accounts')"><i class="fas fa-credit-card"></i><span>My Accounts</span></a></li>
+        <li ng-class="{active: currentPage==='transfer'}"><a ng-click="navigate('transfer')"><i class="fas fa-arrow-right-arrow-left"></i><span>Transfer Funds</span></a></li>
+        <li ng-class="{active: currentPage==='transactions'}"><a ng-click="navigate('transactions')"><i class="fas fa-clock-rotate-left"></i><span>Transactions</span></a></li>
+        <li ng-class="{active: currentPage==='admin'}" ng-if="isAdmin()"><a ng-click="navigate('admin')"><i class="fas fa-shield-halved"></i><span>Admin Panel</span></a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" ng-click="logout()"><i class="fas fa-arrow-right-from-bracket"></i><span>Sign Out</span></button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h2 class="page-title">{{ pageTitle }}</h2>
+        <div class="breadcrumb"><span>Home</span><i class="fas fa-chevron-right"></i><span>{{ pageTitle }}</span></div>
       </div>
-      <nav class="sidebar-nav">
-        <ul>
-          <li ng-class="{active: currentPage==='dashboard'}"><a ng-click="navigate('dashboard')"><i class="fas fa-th-large"></i><span>Dashboard</span></a></li>
-          <li ng-class="{active: currentPage==='accounts'}"><a ng-click="navigate('accounts')"><i class="fas fa-wallet"></i><span>My Accounts</span></a></li>
-          <li ng-class="{active: currentPage==='transfer'}"><a ng-click="navigate('transfer')"><i class="fas fa-exchange-alt"></i><span>Transfer Funds</span></a></li>
-          <li ng-class="{active: currentPage==='transactions'}"><a ng-click="navigate('transactions')"><i class="fas fa-list-alt"></i><span>Transactions</span></a></li>
-          <li ng-class="{active: currentPage==='admin'}" ng-if="isAdmin()"><a ng-click="navigate('admin')"><i class="fas fa-users-cog"></i><span>Admin Panel</span></a></li>
-        </ul>
-      </nav>
-      <div class="sidebar-footer"><a ng-click="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i><span>Sign Out</span></a></div>
-    </aside>
+      <div class="topbar-right">
+        <div class="topbar-time"><i class="fas fa-clock"></i> {{ currentTime | date:'MMM d, yyyy HH:mm' }}</div>
+        <div class="topbar-user"><div class="avatar-sm">{{ currentUser.fullName | limitTo:1 }}</div><span>{{ currentUser.username }}</span></div>
+      </div>
+    </header>
 
-    <div class="main-content">
-      <header class="topbar">
-        <div class="topbar-left">
-          <h2 class="page-title">{{ pageTitle }}</h2>
-          <div class="breadcrumb"><span>Home</span><i class="fas fa-chevron-right"></i><span>{{ pageTitle }}</span></div>
-        </div>
-        <div class="topbar-right">
-          <div class="topbar-time"><i class="fas fa-clock"></i> {{ currentTime | date:'MMM d, yyyy HH:mm' }}</div>
-          <div class="topbar-user"><div class="avatar-sm">{{ currentUser.fullName | limitTo:1 }}</div><span>{{ currentUser.username }}</span></div>
-        </div>
-      </header>
+    <div class="page-content">
 
-      <div class="page-content">
-
-        <!-- DASHBOARD -->
-        <div ng-if="currentPage==='dashboard'">
-          <div class="stats-grid">
-            <div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-wallet"></i></div><div class="stat-info"><div class="stat-label">Total Balance</div><div class="stat-value">{{ totalBalance | currency:'&#8369;' }}</div><div class="stat-sub">Across all accounts</div></div></div>
-            <div class="stat-card stat-teal"><div class="stat-icon"><i class="fas fa-university"></i></div><div class="stat-info"><div class="stat-label">Active Accounts</div><div class="stat-value">{{ accounts.length }}</div><div class="stat-sub">All accounts active</div></div></div>
-            <div class="stat-card stat-indigo"><div class="stat-icon"><i class="fas fa-arrow-up"></i></div><div class="stat-info"><div class="stat-label">Total Credits</div><div class="stat-value">{{ totalCredits | currency:'&#8369;' }}</div><div class="stat-sub">Received this period</div></div></div>
-            <div class="stat-card stat-navy"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-info"><div class="stat-label">Total Debits</div><div class="stat-value">{{ totalDebits | currency:'&#8369;' }}</div><div class="stat-sub">Sent this period</div></div></div>
+      <!-- DASHBOARD -->
+      <div ng-if="currentPage==='dashboard'">
+        <!-- Greeting Banner -->
+        <div class="greeting-banner">
+          <div class="greeting-text">
+            <h3>Good day, {{ currentUser.fullName }}! 👋</h3>
+            <p>Here's an overview of your finances today.</p>
           </div>
+          <div class="greeting-badge">
+            <div class="greeting-badge-label">Total Balance</div>
+            <div class="greeting-badge-value">{{ totalBalance | currency:'₱' }}</div>
+          </div>
+        </div>
 
-          <div class="dashboard-grid">
-            <div class="card">
-              <div class="card-header"><h3><i class="fas fa-credit-card"></i> My Accounts</h3><button class="btn btn-sm btn-outline" ng-click="navigate('accounts')">View All</button></div>
-              <div class="card-body">
-                <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
-                <div class="account-card" ng-repeat="acc in accounts">
-                  <div class="account-card-left">
-                    <div class="account-icon"><i class="fas fa-piggy-bank"></i></div>
-                    <div><div class="account-type">{{ acc.accountType }}</div><div class="account-number">{{ acc.accountNumber }}</div></div>
-                  </div>
-                  <div class="account-balance"><div class="balance-label">Balance</div><div class="balance-amount">{{ acc.balance | currency:'&#8369;' }}</div></div>
-                </div>
-                <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0"><i class="fas fa-wallet"></i><p>No accounts found</p></div>
-              </div>
+        <!-- Stats Grid: 3 cards (Total Balance removed; shown in greeting banner) -->
+        <div class="stats-grid">
+          <div class="stat-card stat-teal">
+            <div class="stat-icon"><i class="fas fa-university"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Accounts</div>
+              <div class="stat-value">{{ accounts.length }}</div>
+              <div class="stat-sub">Active</div>
             </div>
+          </div>
+          <div class="stat-card stat-indigo">
+            <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Total Credits</div>
+              <div class="stat-value">{{ totalCredits | currency:'₱' }}</div>
+              <div class="stat-sub">Received this period</div>
+            </div>
+          </div>
+          <div class="stat-card stat-navy">
+            <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Total Debits</div>
+              <div class="stat-value">{{ totalDebits | currency:'₱' }}</div>
+              <div class="stat-sub">Sent this period</div>
+            </div>
+          </div>
+        </div>
 
-            <div class="card">
-              <div class="card-header"><h3><i class="fas fa-history"></i> Recent Transactions</h3><button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button></div>
-              <div class="card-body">
-                <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
-                <div class="txn-row" ng-repeat="t in recentTransactions | limitTo:5">
-                  <div class="txn-icon" ng-class="t.direction==='CREDIT'?'txn-credit':'txn-debit'"><i class="fas" ng-class="t.direction==='CREDIT'?'fa-arrow-down':'fa-arrow-up'"></i></div>
-                  <div class="txn-info"><div class="txn-ref">{{ t.referenceNumber }}</div><div class="txn-desc">{{ t.description || t.transactionType }}</div><div class="txn-date">{{ t.createdAt | date:'MMM d, h:mm a' }}</div></div>
-                  <div class="txn-amount" ng-class="t.direction==='CREDIT'?'amount-credit':'amount-debit'"><span ng-if="t.direction==='DEBIT'">-</span>{{ t.amount | currency:'&#8369;' }}</div>
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-credit-card"></i> My Accounts</h3>
+              <button class="btn btn-sm btn-outline" ng-click="navigate('accounts')">View All</button>
+            </div>
+            <div class="card-body">
+              <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
+              <div class="account-card" ng-repeat="acc in accounts">
+                <div class="account-card-left">
+                  <div class="account-icon"><i class="fas fa-piggy-bank"></i></div>
+                  <div>
+                    <div class="account-type">{{ acc.accountType }}</div>
+                    <div class="account-number">{{ acc.accountNumber }}</div>
+                  </div>
                 </div>
-                <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0"><i class="fas fa-receipt"></i><p>No transactions yet</p></div>
+                <div class="account-balance">
+                  <div class="balance-label">Balance</div>
+                  <div class="balance-amount">{{ acc.balance | currency:'₱' }}</div>
+                </div>
               </div>
+              <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0"><i class="fas fa-wallet"></i><p>No accounts found</p></div>
             </div>
           </div>
 
           <div class="card">
-            <div class="card-header"><h3><i class="fas fa-bolt"></i> Quick Transfer</h3></div>
+            <div class="card-header">
+              <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
+              <button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button>
+            </div>
             <div class="card-body">
-              <div class="quick-transfer-form">
-                <div class="form-row">
-                  <div class="form-group"><label>From Account</label><select ng-model="quickTransfer.senderAccountNumber" class="form-control"><option value="" disabled>Select account</option><option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} ({{ acc.balance | currency:'&#8369;' }})</option></select></div>
-                  <div class="form-group"><label>To Account Number</label><input type="text" ng-model="quickTransfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002"></div>
-                  <div class="form-group"><label>Amount (&#8369;)</label><input type="number" ng-model="quickTransfer.amount" class="form-control" placeholder="0.00" min="1"></div>
-                  <div class="form-group"><label>Description</label><input type="text" ng-model="quickTransfer.description" class="form-control" placeholder="Optional note"></div>
+              <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+              <div class="txn-row" ng-repeat="t in recentTransactions | limitTo:5">
+                <div class="txn-icon" ng-class="t.direction==='CREDIT'?'txn-credit':'txn-debit'">
+                  <i class="fas" ng-class="t.direction==='CREDIT'?'fa-arrow-down':'fa-arrow-up'"></i>
                 </div>
-                <div class="alert alert-success" ng-if="quickTransferSuccess"><i class="fas fa-check-circle"></i> {{ quickTransferSuccess }}</div>
-                <div class="alert alert-danger" ng-if="quickTransferError"><i class="fas fa-exclamation-circle"></i> {{ quickTransferError }}</div>
-                <button class="btn btn-primary" ng-click="doQuickTransfer()" ng-disabled="transferring">
-                  <span ng-if="!transferring"><i class="fas fa-paper-plane"></i> Send Money</span>
+                <div class="txn-info">
+                  <div class="txn-ref">{{ t.referenceNumber }}</div>
+                  <div class="txn-desc">{{ t.description || t.transactionType }}</div>
+                  <div class="txn-date">{{ t.createdAt | date:'MMM d, h:mm a' }}</div>
+                </div>
+                <div class="txn-amount" ng-class="t.direction==='CREDIT'?'amount-credit':'amount-debit'">
+                  <span ng-if="t.direction==='DEBIT'">-</span>{{ t.amount | currency:'₱' }}
+                </div>
+              </div>
+              <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0"><i class="fas fa-receipt"></i><p>No transactions yet</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-bolt"></i> Quick Transfer</h3></div>
+          <div class="card-body">
+            <div class="quick-transfer-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>From Account</label>
+                  <select ng-model="quickTransfer.senderAccountNumber" class="form-control">
+                    <option value="" disabled>Select account</option>
+                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} ({{ acc.balance | currency:'₱' }})</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>To Account Number</label>
+                  <input type="text" ng-model="quickTransfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002">
+                </div>
+                <div class="form-group">
+                  <label>Amount (&#8369;)</label>
+                  <input type="number" ng-model="quickTransfer.amount" class="form-control" placeholder="0.00" min="1">
+                </div>
+                <div class="form-group">
+                  <label>Description</label>
+                  <input type="text" ng-model="quickTransfer.description" class="form-control" placeholder="Optional note">
+                </div>
+              </div>
+              <div class="alert alert-success" ng-if="quickTransferSuccess"><i class="fas fa-check-circle"></i> {{ quickTransferSuccess }}</div>
+              <div class="alert alert-danger" ng-if="quickTransferError"><i class="fas fa-exclamation-circle"></i> {{ quickTransferError }}</div>
+              <button class="btn btn-primary" ng-click="doQuickTransfer()" ng-disabled="transferring">
+                <span ng-if="!transferring"><i class="fas fa-paper-plane"></i> Send Money</span>
+                <span ng-if="transferring"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCOUNTS PAGE (ATM CARDS) -->
+      <div ng-if="currentPage==='accounts'">
+        <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
+        <div class="atm-cards-grid" ng-if="!loadingAccounts && accounts.length > 0">
+          <div ng-repeat="acc in accounts" class="card" style="overflow:visible; background:transparent; border:none; box-shadow:none; margin-bottom:0;">
+            <div class="atm-card-wrapper">
+              <div class="atm-card" ng-class="'atm-bg-' + (($index % 3) + 1)">
+                <div class="atm-card-pattern"></div>
+                <div class="atm-shimmer"></div>
+                <div class="atm-card-inner">
+                  <!-- Top Row -->
+                  <div class="atm-top">
+                    <div>
+                      <div class="atm-bank-name">E-Banking</div>
+                      <div class="atm-chip" style="margin-top:.6rem"></div>
+                    </div>
+                    <div style="text-align:right;">
+                      <div class="atm-contactless"><i class="fas fa-wifi"></i></div>
+                      <div class="atm-status" ng-class="acc.isActive ? 'active-status' : 'inactive-status'" style="margin-top:.5rem; justify-content:flex-end;">
+                        {{ acc.isActive ? 'Active' : 'Inactive' }}
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Mid Row - Balance -->
+                  <div class="atm-mid">
+                    <div class="atm-balance-label">Available Balance</div>
+                    <div class="atm-balance">{{ acc.balance | currency:'₱' }}</div>
+                  </div>
+                  <!-- Bottom Row -->
+                  <div class="atm-bottom">
+                    <div>
+                      <div class="atm-number">{{ acc.accountNumber }}</div>
+                    </div>
+                    <div class="atm-details">
+                      <div class="atm-holder-label">Card Holder</div>
+                      <div class="atm-holder-name">{{ acc.ownerFullName }}</div>
+                      <div class="atm-account-type">{{ acc.accountType }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Meta Info Below Card -->
+            <div class="atm-meta" style="border-radius: 0 0 16px 16px; background: white; border: 1px solid var(--gray-100); border-top: none; box-shadow: var(--shadow);">
+              <div class="atm-meta-item">
+                <div class="atm-meta-label">Account Number</div>
+                <div class="atm-meta-value">{{ acc.accountNumber }}</div>
+              </div>
+              <div class="atm-meta-item">
+                <div class="atm-meta-label">Date Opened</div>
+                <div class="atm-meta-value">{{ acc.createdAt | date:'MMM d, yyyy' }}</div>
+              </div>
+              <div class="atm-meta-item">
+                <div class="atm-meta-label">Account Type</div>
+                <div class="atm-meta-value">{{ acc.accountType }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0">
+          <i class="fas fa-credit-card"></i><p>No accounts found</p>
+        </div>
+      </div>
+
+      <!-- TRANSFER PAGE -->
+      <div ng-if="currentPage==='transfer'">
+        <div class="card transfer-card">
+          <div class="card-header"><h3><i class="fas fa-arrow-right-arrow-left"></i> Fund Transfer</h3></div>
+          <div class="card-body">
+            <div class="transfer-form">
+              <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-paper-plane"></i> Sender Information</div>
+                <div class="form-group"><label>From Account</label>
+                  <select ng-model="transfer.senderAccountNumber" class="form-control" ng-change="getSenderBalance()">
+                    <option value="" disabled>Select your account</option>
+                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} - {{ acc.accountType }} ({{ acc.balance | currency:'₱' }})</option>
+                  </select>
+                </div>
+                <div class="balance-preview" ng-if="senderBalance !== null">Available Balance: <strong>{{ senderBalance | currency:'₱' }}</strong></div>
+              </div>
+              <div class="transfer-arrow"><i class="fas fa-arrow-down"></i></div>
+              <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-inbox"></i> Recipient Information</div>
+                <div class="form-group"><label>To Account Number</label><input type="text" ng-model="transfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002"></div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-money-bill-wave"></i> Transfer Details</div>
+                <div class="form-group"><label>Amount (&#8369;)</label>
+                  <div class="amount-input-wrap"><span class="amount-prefix">&#8369;</span><input type="number" ng-model="transfer.amount" class="form-control amount-input" placeholder="0.00" min="1" step="0.01"></div>
+                </div>
+                <div class="form-group"><label>Description (Optional)</label><textarea ng-model="transfer.description" class="form-control" rows="2" placeholder="Add a note for this transfer"></textarea></div>
+              </div>
+              <div class="alert alert-success" ng-if="transferSuccess"><i class="fas fa-check-circle"></i> {{ transferSuccess.message }}
+                <div class="txn-detail-box" ng-if="transferSuccess.data">
+                  <div>Reference: <strong>{{ transferSuccess.data.referenceNumber }}</strong></div>
+                  <div>Amount: <strong>{{ transferSuccess.data.amount | currency:'₱' }}</strong></div>
+                  <div>New Balance: <strong>{{ transferSuccess.data.newSenderBalance | currency:'₱' }}</strong></div>
+                </div>
+              </div>
+              <div class="alert alert-danger" ng-if="transferError"><i class="fas fa-exclamation-circle"></i> {{ transferError }}</div>
+              <div class="transfer-actions">
+                <button class="btn btn-outline" ng-click="clearTransfer()"><i class="fas fa-times"></i> Clear</button>
+                <button class="btn btn-primary" ng-click="doTransfer()" ng-disabled="transferring">
+                  <span ng-if="!transferring"><i class="fas fa-paper-plane"></i> Submit Transfer</span>
                   <span ng-if="transferring"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- ACCOUNTS PAGE -->
-        <div ng-if="currentPage==='accounts'">
-          <div class="card">
-            <div class="card-header"><h3><i class="fas fa-wallet"></i> My Accounts</h3></div>
-            <div class="card-body">
-              <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
-              <div class="account-detail-card" ng-repeat="acc in accounts">
-                <div class="adc-header"><div class="adc-type-badge">{{ acc.accountType }}</div><div class="adc-status" ng-class="acc.isActive?'badge-active':'badge-inactive'">{{ acc.isActive?'Active':'Inactive' }}</div></div>
-                <div class="adc-body"><div class="adc-number">{{ acc.accountNumber }}</div><div class="adc-owner">{{ acc.ownerFullName }}</div><div class="adc-opened">Opened: {{ acc.createdAt | date:'MMMM d, yyyy' }}</div></div>
-                <div class="adc-footer"><div class="adc-bal-label">Current Balance</div><div class="adc-balance">{{ acc.balance | currency:'&#8369;' }}</div></div>
-              </div>
-              <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0"><i class="fas fa-wallet"></i><p>No accounts found</p></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TRANSFER PAGE -->
-        <div ng-if="currentPage==='transfer'">
-          <div class="card transfer-card">
-            <div class="card-header"><h3><i class="fas fa-exchange-alt"></i> Fund Transfer</h3></div>
-            <div class="card-body">
-              <div class="transfer-form">
-                <div class="form-section">
-                  <div class="form-section-title"><i class="fas fa-paper-plane"></i> Sender Information</div>
-                  <div class="form-group"><label>From Account</label>
-                    <select ng-model="transfer.senderAccountNumber" class="form-control" ng-change="getSenderBalance()">
-                      <option value="" disabled>Select your account</option>
-                      <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} - {{ acc.accountType }} ({{ acc.balance | currency:'&#8369;' }})</option>
-                    </select>
-                  </div>
-                  <div class="balance-preview" ng-if="senderBalance !== null">Available Balance: <strong>{{ senderBalance | currency:'&#8369;' }}</strong></div>
-                </div>
-                <div class="transfer-arrow"><i class="fas fa-arrow-down"></i></div>
-                <div class="form-section">
-                  <div class="form-section-title"><i class="fas fa-inbox"></i> Recipient Information</div>
-                  <div class="form-group"><label>To Account Number</label><input type="text" ng-model="transfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002"></div>
-                </div>
-                <div class="form-section">
-                  <div class="form-section-title"><i class="fas fa-money-bill-wave"></i> Transfer Details</div>
-                  <div class="form-group"><label>Amount (&#8369;)</label><div class="amount-input-wrap"><span class="amount-prefix">&#8369;</span><input type="number" ng-model="transfer.amount" class="form-control amount-input" placeholder="0.00" min="1" step="0.01"></div></div>
-                  <div class="form-group"><label>Description (Optional)</label><textarea ng-model="transfer.description" class="form-control" rows="2" placeholder="Add a note for this transfer"></textarea></div>
-                </div>
-                <div class="alert alert-success" ng-if="transferSuccess"><i class="fas fa-check-circle"></i> {{ transferSuccess.message }}<div class="txn-detail-box" ng-if="transferSuccess.data"><div>Reference: <strong>{{ transferSuccess.data.referenceNumber }}</strong></div><div>Amount: <strong>{{ transferSuccess.data.amount | currency:'&#8369;' }}</strong></div><div>New Balance: <strong>{{ transferSuccess.data.newSenderBalance | currency:'&#8369;' }}</strong></div></div></div>
-                <div class="alert alert-danger" ng-if="transferError"><i class="fas fa-exclamation-circle"></i> {{ transferError }}</div>
-                <div class="transfer-actions">
-                  <button class="btn btn-outline" ng-click="clearTransfer()"><i class="fas fa-times"></i> Clear</button>
-                  <button class="btn btn-primary" ng-click="doTransfer()" ng-disabled="transferring">
-                    <span ng-if="!transferring"><i class="fas fa-paper-plane"></i> Submit Transfer</span>
-                    <span ng-if="transferring"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TRANSACTIONS PAGE -->
-        <div ng-if="currentPage==='transactions'">
-          <div class="card">
-            <div class="card-header"><h3><i class="fas fa-list-alt"></i> Transaction History</h3><input type="text" ng-model="txnSearch" class="search-input" placeholder="Search..."></div>
-            <div class="card-body">
-              <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
-              <div class="table-responsive" ng-if="!loadingTxns">
-                <table class="data-table">
-                  <thead><tr><th>Reference</th><th>Type</th><th>From</th><th>To</th><th>Amount</th><th>Direction</th><th>Status</th><th>Date</th></tr></thead>
-                  <tbody>
-                    <tr ng-repeat="t in transactions | filter:txnSearch">
-                      <td><code>{{ t.referenceNumber }}</code></td><td>{{ t.transactionType }}</td><td>{{ t.senderAccountNumber||'—' }}</td><td>{{ t.receiverAccountNumber||'—' }}</td>
-                      <td><strong>{{ t.amount | currency:'&#8369;' }}</strong></td>
-                      <td><span class="badge" ng-class="t.direction==='CREDIT'?'badge-credit':'badge-debit'">{{ t.direction||'—' }}</span></td>
-                      <td><span class="badge badge-success">{{ t.status }}</span></td>
-                      <td>{{ t.createdAt | date:'MMM d, y HH:mm' }}</td>
-                    </tr>
-                    <tr ng-if="transactions.length===0"><td colspan="8" class="text-center empty-row">No transactions found</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ADMIN PAGE -->
-        <div ng-if="currentPage==='admin' && isAdmin()">
-          <div class="admin-tabs">
-            <button class="tab-btn" ng-class="{active: adminTab==='accounts'}" ng-click="adminTab='accounts'; loadAdminAccounts()"><i class="fas fa-wallet"></i> All Accounts</button>
-            <button class="tab-btn" ng-class="{active: adminTab==='transactions'}" ng-click="adminTab='transactions'; loadAdminTransactions()"><i class="fas fa-exchange-alt"></i> All Transactions</button>
-          </div>
-          <div class="card" ng-if="adminTab==='accounts'">
-            <div class="card-header"><h3><i class="fas fa-users"></i> All Customer Accounts</h3><input type="text" ng-model="adminAccSearch" class="search-input" placeholder="Search..."></div>
-            <div class="card-body">
-              <div class="loading-box" ng-if="loadingAdminAccounts"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
-              <div class="table-responsive">
-                <table class="data-table"><thead><tr><th>Account Number</th><th>Owner</th><th>Username</th><th>Type</th><th>Balance</th><th>Status</th><th>Opened</th></tr></thead>
-                  <tbody>
-                    <tr ng-repeat="a in adminAccounts | filter:adminAccSearch"><td><code>{{ a.accountNumber }}</code></td><td>{{ a.ownerFullName }}</td><td>{{ a.ownerUsername }}</td><td>{{ a.accountType }}</td><td><strong>{{ a.balance | currency:'&#8369;' }}</strong></td><td><span class="badge" ng-class="a.isActive?'badge-success':'badge-danger'">{{ a.isActive?'Active':'Inactive' }}</span></td><td>{{ a.createdAt | date:'MMM d, y' }}</td></tr>
-                    <tr ng-if="adminAccounts.length===0"><td colspan="7" class="empty-row text-center">No accounts found</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          <div class="card" ng-if="adminTab==='transactions'">
-            <div class="card-header"><h3><i class="fas fa-list"></i> All Transactions</h3><input type="text" ng-model="adminTxnSearch" class="search-input" placeholder="Search..."></div>
-            <div class="card-body">
-              <div class="loading-box" ng-if="loadingAdminTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
-              <div class="table-responsive">
-                <table class="data-table"><thead><tr><th>Reference</th><th>From</th><th>To</th><th>Amount</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
-                  <tbody>
-                    <tr ng-repeat="t in adminTransactions | filter:adminTxnSearch"><td><code>{{ t.referenceNumber }}</code></td><td>{{ t.senderAccountNumber||'—' }}</td><td>{{ t.receiverAccountNumber||'—' }}</td><td><strong>{{ t.amount | currency:'&#8369;' }}</strong></td><td>{{ t.transactionType }}</td><td><span class="badge badge-success">{{ t.status }}</span></td><td>{{ t.createdAt | date:'MMM d, y HH:mm' }}</td></tr>
-                    <tr ng-if="adminTransactions.length===0"><td colspan="7" class="empty-row text-center">No transactions found</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
+
+      <!-- TRANSACTIONS PAGE -->
+      <div ng-if="currentPage==='transactions'">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-clock-rotate-left"></i> Transaction History</h3>
+            <input type="text" ng-model="txnSearch" class="search-input" placeholder="&#xf002;  Search...">
+          </div>
+          <div class="card-body">
+            <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            <div class="table-responsive" ng-if="!loadingTxns">
+              <table class="data-table">
+                <thead><tr><th>Reference</th><th>Type</th><th>From</th><th>To</th><th>Amount</th><th>Direction</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                <tr ng-repeat="t in transactions | filter:txnSearch">
+                  <td><code>{{ t.referenceNumber }}</code></td>
+                  <td>{{ t.transactionType }}</td>
+                  <td><code class="acct-code">{{ t.senderAccountNumber||'—' }}</code></td>
+                  <td><code class="acct-code">{{ t.receiverAccountNumber||'—' }}</code></td>
+                  <td><strong>{{ t.amount | currency:'₱' }}</strong></td>
+                  <td><span class="badge" ng-class="t.direction==='CREDIT'?'badge-credit':'badge-debit'">{{ t.direction||'—' }}</span></td>
+                  <td><span class="badge badge-success">{{ t.status }}</span></td>
+                  <td>{{ t.createdAt | date:'MMM d, y HH:mm' }}</td>
+                </tr>
+                <tr ng-if="transactions.length===0"><td colspan="8" class="text-center empty-row">No transactions found</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN PAGE -->
+      <div ng-if="currentPage==='admin' && isAdmin()">
+        <div class="admin-tabs">
+          <button class="tab-btn" ng-class="{active: adminTab==='accounts'}" ng-click="adminTab='accounts'; loadAdminAccounts()"><i class="fas fa-wallet"></i> All Accounts</button>
+          <button class="tab-btn" ng-class="{active: adminTab==='transactions'}" ng-click="adminTab='transactions'; loadAdminTransactions()"><i class="fas fa-arrow-right-arrow-left"></i> All Transactions</button>
+        </div>
+        <div class="card" ng-if="adminTab==='accounts'">
+          <div class="card-header"><h3><i class="fas fa-users"></i> All Customer Accounts</h3><input type="text" ng-model="adminAccSearch" class="search-input" placeholder="Search..."></div>
+          <div class="card-body">
+            <div class="loading-box" ng-if="loadingAdminAccounts"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>Account Number</th><th>Owner</th><th>Username</th><th>Type</th><th>Balance</th><th>Status</th><th>Opened</th></tr></thead>
+                <tbody>
+                <tr ng-repeat="a in adminAccounts | filter:adminAccSearch">
+                  <td><code>{{ a.accountNumber }}</code></td><td>{{ a.ownerFullName }}</td><td>{{ a.ownerUsername }}</td>
+                  <td>{{ a.accountType }}</td><td><strong>{{ a.balance | currency:'₱' }}</strong></td>
+                  <td><span class="badge" ng-class="a.isActive?'badge-active':'badge-inactive'">{{ a.isActive?'Active':'Inactive' }}</span></td>
+                  <td>{{ a.createdAt | date:'MMM d, y' }}</td>
+                </tr>
+                <tr ng-if="adminAccounts.length===0"><td colspan="7" class="empty-row text-center">No accounts found</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card" ng-if="adminTab==='transactions'">
+          <div class="card-header"><h3><i class="fas fa-list"></i> All Transactions</h3><input type="text" ng-model="adminTxnSearch" class="search-input" placeholder="Search..."></div>
+          <div class="card-body">
+            <div class="loading-box" ng-if="loadingAdminTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            <div class="table-responsive">
+              <table class="data-table"><thead><tr><th>Reference</th><th>From</th><th>To</th><th>Amount</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                <tr ng-repeat="t in adminTransactions | filter:adminTxnSearch">
+                  <td><code>{{ t.referenceNumber }}</code></td>
+                  <td><code class="acct-code">{{ t.senderAccountNumber||'—' }}</code></td>
+                  <td><code class="acct-code">{{ t.receiverAccountNumber||'—' }}</code></td>
+                  <td><strong>{{ t.amount | currency:'₱' }}</strong></td>
+                  <td>{{ t.transactionType }}</td><td><span class="badge badge-success">{{ t.status }}</span></td>
+                  <td>{{ t.createdAt | date:'MMM d, y HH:mm' }}</td>
+                </tr>
+                <tr ng-if="adminTransactions.length===0"><td colspan="7" class="empty-row text-center">No transactions found</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
+</div>
 
-  <script src="app/app.js"></script>
+<script src="app/app.js"></script>
 </body>
 </html>
