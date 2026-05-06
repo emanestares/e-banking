@@ -1,6 +1,7 @@
 package com.example.banking.config;
 
 import com.example.banking.service.UserDetailsServiceImpl;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +16,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -73,12 +76,41 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"message\": \"Unauthorized\"}");
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("{\"message\": \"Access denied\"}");
+        };
+    }
+
+
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // to know if it is a 401 or a 403 behavior
+                .anonymous(AbstractHttpConfigurer::disable)
+
+                // this handles access denied
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler())
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/auth/**", "/", "/index.html", "/app/**", "/assets/**").permitAll()
