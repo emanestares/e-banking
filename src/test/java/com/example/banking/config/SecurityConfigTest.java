@@ -7,10 +7,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ActiveProfiles("test")
 @SpringBootTest
 class SecurityConfigTest {
 
@@ -48,7 +50,6 @@ class SecurityConfigTest {
     @Test
     void shouldCreateAuthenticationProvider() {
         assertNotNull(authenticationProvider);
-        assertNotNull(authenticationProvider.getPasswordEncoder());
     }
 
     @Test

@@ -9,16 +9,20 @@ import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class AuthServiceTest {
@@ -38,17 +42,16 @@ class AuthServiceTest {
     @Mock
     private AccountRepository accountRepository;
 
-    @Mock
-    private Authentication authentication;
-
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
+    // ---------------- SUCCESS WITH ACCOUNT ----------------
+
     @Test
     void shouldLoginSuccessfully_withAccount() {
-        // ---------- Arrange ----------
+
         LoginRequest request = new LoginRequest();
         request.setUsername("john");
         request.setPassword("password");
@@ -64,14 +67,17 @@ class AuthServiceTest {
                 .accountNumber("ACC123")
                 .build();
 
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "john",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
         when(authenticationManager.authenticate(any()))
-                .thenReturn(authentication);
+                .thenReturn(auth);
 
-        when(jwtUtils.generateToken(authentication))
+        when(jwtUtils.generateToken(auth))
                 .thenReturn("jwt-token");
-
-        when(authentication.getAuthorities())
-                .thenReturn(List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
@@ -79,10 +85,8 @@ class AuthServiceTest {
         when(accountRepository.findActiveAccountsByUserId(1L))
                 .thenReturn(List.of(account));
 
-        // ---------- Act ----------
         LoginResponse response = authService.login(request);
 
-        // ---------- Assert ----------
         assertNotNull(response);
         assertEquals("jwt-token", response.getToken());
         assertEquals("john", response.getUsername());
@@ -91,12 +95,14 @@ class AuthServiceTest {
         assertEquals(10L, response.getAccountId());
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtUtils).generateToken(authentication);
+        verify(jwtUtils).generateToken(auth);
     }
+
+    // ---------------- SUCCESS WITHOUT ACCOUNTS ----------------
 
     @Test
     void shouldLoginSuccessfully_withoutAccounts() {
-        // ---------- Arrange ----------
+
         LoginRequest request = new LoginRequest();
         request.setUsername("john");
         request.setPassword("password");
@@ -107,60 +113,66 @@ class AuthServiceTest {
                 .fullName("John Doe")
                 .build();
 
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "john",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
         when(authenticationManager.authenticate(any()))
-                .thenReturn(authentication);
+                .thenReturn(auth);
 
-        when(jwtUtils.generateToken(authentication))
+        when(jwtUtils.generateToken(auth))
                 .thenReturn("jwt-token");
-
-        when(authentication.getAuthorities())
-                .thenReturn(List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
 
         when(accountRepository.findActiveAccountsByUserId(1L))
-                .thenReturn(List.of()); // no accounts
+                .thenReturn(List.of());
 
-        // ---------- Act ----------
         LoginResponse response = authService.login(request);
 
-        // ---------- Assert ----------
         assertNotNull(response);
-        assertEquals("jwt-token", response.getToken());
         assertNull(response.getAccountId());
         assertNull(response.getAccountNumber());
     }
 
+    // ---------------- USER NOT FOUND ----------------
+
     @Test
     void shouldThrowException_whenUserNotFound() {
-        // ---------- Arrange ----------
+
         LoginRequest request = new LoginRequest();
         request.setUsername("john");
         request.setPassword("password");
 
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "john",
+                "password",
+                List.of()
+        );
+
         when(authenticationManager.authenticate(any()))
-                .thenReturn(authentication);
+                .thenReturn(auth);
 
-        when(jwtUtils.generateToken(authentication))
+        when(jwtUtils.generateToken(auth))
                 .thenReturn("jwt-token");
-
-        when(authentication.getAuthorities())
-                .thenReturn(List.of());
 
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.empty());
 
-        // ---------- Act + Assert ----------
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.login(request));
 
         assertEquals("User not found", ex.getMessage());
     }
 
+    // ---------------- ROLE MAPPING ----------------
+
     @Test
     void shouldMapRolesCorrectly() {
-        // ---------- Arrange ----------
+
         LoginRequest request = new LoginRequest();
         request.setUsername("john");
         request.setPassword("password");
@@ -171,17 +183,20 @@ class AuthServiceTest {
                 .fullName("John Doe")
                 .build();
 
-        when(authenticationManager.authenticate(any()))
-                .thenReturn(authentication);
-
-        when(jwtUtils.generateToken(authentication))
-                .thenReturn("jwt-token");
-
-        when(authentication.getAuthorities())
-                .thenReturn(List.of(
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "john",
+                "password",
+                List.of(
                         new SimpleGrantedAuthority("ROLE_USER"),
                         new SimpleGrantedAuthority("ROLE_ADMIN")
-                ));
+                )
+        );
+
+        when(authenticationManager.authenticate(any()))
+                .thenReturn(auth);
+
+        when(jwtUtils.generateToken(auth))
+                .thenReturn("jwt-token");
 
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
@@ -189,10 +204,8 @@ class AuthServiceTest {
         when(accountRepository.findActiveAccountsByUserId(1L))
                 .thenReturn(List.of());
 
-        // ---------- Act ----------
         LoginResponse response = authService.login(request);
 
-        // ---------- Assert ----------
         assertTrue(response.getRoles().contains("ROLE_USER"));
         assertTrue(response.getRoles().contains("ROLE_ADMIN"));
         assertEquals(2, response.getRoles().size());

@@ -2,12 +2,12 @@ package com.example.banking.repository;
 
 import com.example.banking.model.Account;
 import com.example.banking.model.User;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-
-import jakarta.persistence.EntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ActiveProfiles("test")
 @DataJpaTest
 class AccountRepositoryTest {
 
@@ -27,7 +28,10 @@ class AccountRepositoryTest {
     private User createUser(String username) {
         User user = new User();
         user.setUsername(username);
-        user.setPassword("password");
+        user.setEmail(username + "@test.com");
+        user.setPasswordHash("password");
+        user.setFullName(username);
+
         entityManager.persist(user);
         return user;
     }
@@ -40,7 +44,6 @@ class AccountRepositoryTest {
                 .isActive(isActive)
                 .build();
 
-        account.onCreate(); // simulate @PrePersist
         entityManager.persist(account);
         return account;
     }
@@ -93,28 +96,27 @@ class AccountRepositoryTest {
     }
 
     @Test
-    @DisplayName("findAllActiveAccountsWithUsers should return only active accounts ordered by createdAt desc")
+    @DisplayName("findAllActiveAccountsWithUsers should return only active accounts ordered")
     void shouldFindAllActiveAccountsWithUsers() {
         User user = createUser("john");
 
-        Account acc1 = createAccount(user, "ACC1", true);
-        Account acc2 = createAccount(user, "ACC2", true);
-        createAccount(user, "ACC3", false); // inactive
+        createAccount(user, "ACC1", true);
+        createAccount(user, "ACC2", true);
+        createAccount(user, "ACC3", false);
 
         List<Account> result = accountRepository.findAllActiveAccountsWithUsers();
 
         assertEquals(2, result.size());
         assertTrue(result.stream().allMatch(Account::getIsActive));
 
-        // Ensure ordering (latest first)
-        assertTrue(result.get(0).getCreatedAt()
-                .isAfter(result.get(1).getCreatedAt())
-                || result.get(0).getCreatedAt()
-                .isEqual(result.get(1).getCreatedAt()));
+        assertTrue(
+                result.get(0).getCreatedAt().isAfter(result.get(1).getCreatedAt())
+                        || result.get(0).getCreatedAt().isEqual(result.get(1).getCreatedAt())
+        );
     }
 
     @Test
-    @DisplayName("findActiveAccountsByUserId should return only active accounts for user")
+    @DisplayName("findActiveAccountsByUserId should return only active accounts")
     void shouldFindActiveAccountsByUserId() {
         User user = createUser("john");
 
