@@ -3,6 +3,9 @@
    Blue Theme
    ============================================================ */
 
+@import url('sidebar.css');
+
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -46,6 +49,14 @@
 body { font-family: 'Inter', -apple-system, sans-serif; background: var(--gray-50); color: var(--gray-700); min-height: 100vh; }
 
 /* ── LOGIN SCREEN ──────────────────────────────────────────── */
+
+.required {
+  color: #ef4444;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+
 .login-screen {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--blue-950) 0%, var(--blue-800) 50%, var(--blue-600) 100%);
@@ -81,63 +92,6 @@ body { font-family: 'Inter', -apple-system, sans-serif; background: var(--gray-5
 /* ── APP SHELL ─────────────────────────────────────────────── */
 .app-shell { display: flex; min-height: 100vh; }
 
-/* ── SIDEBAR ───────────────────────────────────────────────── */
-.sidebar {
-  width: var(--sidebar-w); min-height: 100vh; position: fixed; left: 0; top: 0;
-  background: var(--blue-950);
-  display: flex; flex-direction: column;
-  transition: width .25s ease; z-index: 100;
-  box-shadow: 2px 0 12px rgba(0,0,0,.2);
-}
-.sidebar.sidebar-collapsed { width: var(--sidebar-collapsed); }
-
-.sidebar-header {
-  height: var(--topbar-h); display: flex; align-items: center;
-  padding: 0 1.25rem; gap: .75rem;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-}
-.brand { display: flex; align-items: center; gap: .6rem; color: var(--white); flex: 1; overflow: hidden; }
-.brand i { font-size: 1.4rem; color: var(--blue-400); flex-shrink: 0; }
-.brand-name { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
-.sidebar-toggle { background: none; border: none; color: rgba(255,255,255,.5); cursor: pointer; font-size: 1rem; padding: .3rem; border-radius: 6px; }
-.sidebar-toggle:hover { color: var(--white); background: rgba(255,255,255,.08); }
-
-.sidebar-user {
-  padding: 1rem 1.25rem; display: flex; align-items: center; gap: .75rem;
-  border-bottom: 1px solid rgba(255,255,255,.07); overflow: hidden;
-}
-.user-avatar {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--blue-600); color: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 1rem; flex-shrink: 0;
-}
-.user-info { overflow: hidden; }
-.user-name { color: var(--white); font-weight: 600; font-size: .9rem; white-space: nowrap; }
-.user-role { color: var(--blue-300); font-size: .78rem; white-space: nowrap; }
-
-.sidebar-nav { flex: 1; padding: .75rem 0; overflow-y: auto; }
-.sidebar-nav ul { list-style: none; }
-.sidebar-nav li a {
-  display: flex; align-items: center; gap: .9rem;
-  padding: .75rem 1.25rem; color: rgba(255,255,255,.6);
-  cursor: pointer; border-radius: 0; transition: all .15s;
-  white-space: nowrap; overflow: hidden;
-  text-decoration: none;
-}
-.sidebar-nav li a i { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
-.sidebar-nav li a span { font-size: .88rem; }
-.sidebar-nav li a:hover { color: var(--white); background: rgba(255,255,255,.07); }
-.sidebar-nav li.active a { color: var(--white); background: var(--blue-700); border-right: 3px solid var(--blue-400); }
-
-.sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,.07); }
-.logout-btn {
-  display: flex; align-items: center; gap: .9rem;
-  color: rgba(255,255,255,.5); cursor: pointer; font-size: .88rem;
-  padding: .6rem .5rem; border-radius: 8px; transition: all .15s; white-space: nowrap; overflow: hidden;
-}
-.logout-btn:hover { color: var(--danger); background: rgba(239,68,68,.1); }
-.logout-btn i { width: 20px; text-align: center; }
 
 /* ── MAIN CONTENT ──────────────────────────────────────────── */
 .main-content { margin-left: var(--sidebar-w); flex: 1; transition: margin-left .25s; min-height: 100vh; display: flex; flex-direction: column; }

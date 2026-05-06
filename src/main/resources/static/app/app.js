@@ -89,7 +89,14 @@ angular.module('bankingApp', [])
     $scope.showSignup  = true;
     $scope.loginError  = null;
     $scope.signupError = null;
-    $scope.signupData  = {};
+    $scope.signupData = {
+      fullName: '',
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      initialDeposit: 0
+    };
   };
 
   $scope.goToLogin = function () {
@@ -101,35 +108,50 @@ angular.module('bankingApp', [])
   $scope.signup = function () {
     $scope.signupError = null;
 
-    if (!$scope.signupData.fullName || !$scope.signupData.username ||
-        !$scope.signupData.email    || !$scope.signupData.password) {
-      $scope.signupError = 'Please fill in all required fields.';
-      return;
-    }
     if ($scope.signupData.password !== $scope.signupData.confirmPassword) {
       $scope.signupError = 'Passwords do not match.';
       return;
     }
+
     if ($scope.signupData.password.length < 6) {
       $scope.signupError = 'Password must be at least 6 characters.';
       return;
     }
 
+    .catch(function (err) {
+      if (err.data && err.data.data) {
+        // backend field errors map
+        var fieldErrors = err.data.data;
+
+        // show first error OR combine them
+        var firstKey = Object.keys(fieldErrors)[0];
+
+        $scope.signupError = fieldErrors[firstKey];
+      } else {
+        $scope.signupError = (err.data && err.data.message) || 'Registration failed.';
+      }
+    })
+
     $scope.signupLoading = true;
+
     var payload = {
-      username      : $scope.signupData.username,
-      email         : $scope.signupData.email,
-      password      : $scope.signupData.password,
-      fullName      : $scope.signupData.fullName,
+      username: $scope.signupData.username,
+      email: $scope.signupData.email,
+      password: $scope.signupData.password,
+      fullName: $scope.signupData.fullName,
       initialDeposit: $scope.signupData.initialDeposit || 0
     };
 
     $http.post(API + '/auth/signup', payload)
-      .then(function (res) { applySession(res.data.data); })
-      .catch(function (err) {
-        $scope.signupError = (err.data && err.data.message) || 'Registration failed. Please try again.';
+      .then(function (res) {
+        applySession(res.data.data);
       })
-      .finally(function () { $scope.signupLoading = false; });
+      .catch(function (err) {
+        $scope.signupError = (err.data && err.data.message) || 'Registration failed. Please Try Again.';
+      })
+      .finally(function () {
+        $scope.signupLoading = false;
+      });
   };
 
   // ── Logout ─────────────────────────────────────────────────

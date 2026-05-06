@@ -56,48 +56,130 @@
       <h1>NexaBank</h1>
       <p>Secure Online Banking</p>
     </div>
+
     <div class="login-card" style="max-width:480px">
       <h2>Create Account</h2>
       <p class="login-subtitle">Open your NexaBank account today</p>
+
       <div class="alert alert-danger" ng-if="signupError">
         <i class="fas fa-exclamation-circle"></i> {{ signupError }}
       </div>
-      <form ng-submit="signup()" novalidate>
+
+      <form name="signupForm" ng-submit="signup()" novalidate>
+
+        <!-- Full Name -->
         <div class="form-group">
-          <label><i class="fas fa-id-card"></i> Full Name</label>
-          <input type="text" ng-model="signupData.fullName" placeholder="e.g. Juan dela Cruz" class="form-control" required>
+          <label>
+            <i class="fas fa-id-card"></i> Full Name
+            <span class="required"
+                  ng-if="signupForm.fullName.$invalid && signupForm.fullName.$touched">*</span>
+          </label>
+          <input name="fullName"
+                 type="text"
+                 ng-model="signupData.fullName"
+                 placeholder="e.g. Juan dela Cruz"
+                 class="form-control"
+                 required>
         </div>
+
+        <!-- Username -->
         <div class="form-group">
-          <label><i class="fas fa-user"></i> Username</label>
-          <input type="text" ng-model="signupData.username" placeholder="Choose a username" class="form-control" required>
+          <label>
+            <i class="fas fa-user"></i> Username
+            <span class="required"
+                  ng-if="signupForm.username.$invalid && signupForm.username.$touched">*</span>
+          </label>
+          <input name="username"
+                 type="text"
+                 ng-model="signupData.username"
+                 placeholder="Choose a username"
+                 class="form-control"
+                 required>
         </div>
+
+        <!-- Email -->
         <div class="form-group">
-          <label><i class="fas fa-envelope"></i> Email</label>
-          <input type="email" ng-model="signupData.email" placeholder="your@email.com" class="form-control" required>
+          <label>
+            <i class="fas fa-envelope"></i> Email
+            <span class="required"
+                  ng-if="signupForm.email.$invalid && signupForm.email.$touched">*</span>
+          </label>
+          <input name="email"
+                 type="email"
+                 ng-model="signupData.email"
+                 placeholder="your@email.com"
+                 class="form-control"
+                 required>
         </div>
+
+        <!-- Password -->
         <div class="form-group">
-          <label><i class="fas fa-lock"></i> Password</label>
-          <input type="password" ng-model="signupData.password" placeholder="At least 6 characters" class="form-control" required>
+          <label>
+            <i class="fas fa-lock"></i> Password
+            <span class="required"
+                  ng-if="signupForm.password.$invalid && signupForm.password.$touched">*</span>
+          </label>
+          <input name="password"
+                 type="password"
+                 ng-model="signupData.password"
+                 placeholder="At least 6 characters"
+                 class="form-control"
+                 required>
         </div>
+
+        <!-- Confirm Password -->
         <div class="form-group">
-          <label><i class="fas fa-lock"></i> Confirm Password</label>
-          <input type="password" ng-model="signupData.confirmPassword" placeholder="Repeat your password" class="form-control" required>
+          <label>
+            <i class="fas fa-lock"></i> Confirm Password
+            <span class="required"
+                  ng-if="signupForm.confirmPassword.$invalid && signupForm.confirmPassword.$touched">*</span>
+          </label>
+          <input name="confirmPassword"
+                 type="password"
+                 ng-model="signupData.confirmPassword"
+                 placeholder="Repeat your password"
+                 class="form-control"
+                 required>
         </div>
+
+        <!-- Initial Deposit -->
         <div class="form-group">
-          <label><i class="fas fa-coins"></i> Initial Deposit (&#8369;) <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
-          <input type="number" ng-model="signupData.initialDeposit" placeholder="0.00" class="form-control" min="0" step="0.01">
+          <label>
+            <i class="fas fa-coins"></i> Initial Deposit (₱)
+            <span style="color:var(--gray-400);font-weight:400">(optional)</span>
+          </label>
+          <input type="number"
+                 ng-model="signupData.initialDeposit"
+                 placeholder="0.00"
+                 class="form-control"
+                 min="0"
+                 step="0.01">
         </div>
-        <button type="submit" class="btn btn-primary btn-block" ng-disabled="signupLoading" style="margin-top:.5rem">
-          <span ng-if="!signupLoading"><i class="fas fa-user-plus"></i> Create Account</span>
-          <span ng-if="signupLoading"><i class="fas fa-spinner fa-spin"></i> Creating account...</span>
+
+        <!-- Submit -->
+        <button type="submit"
+                class="btn btn-primary btn-block"
+                ng-disabled="signupLoading">
+        <span ng-if="!signupLoading">
+          <i class="fas fa-user-plus"></i> Create Account
+        </span>
+          <span ng-if="signupLoading">
+          <i class="fas fa-spinner fa-spin"></i> Creating account...
+        </span>
         </button>
+
       </form>
+
       <div class="login-footer">
-        <a href="#" ng-click="goToLogin()"><i class="fas fa-arrow-left"></i> Back to Sign In</a>
+        <a href="#" ng-click="goToLogin()">
+          <i class="fas fa-arrow-left"></i> Back to Sign In
+        </a>
       </div>
     </div>
+
     <div class="login-info">
-      <i class="fas fa-shield-alt"></i> 256-bit SSL Encrypted &bull; Secured by NexaBank
+      <i class="fas fa-shield-alt"></i>
+      256-bit SSL Encrypted • Secured by NexaBank
     </div>
   </div>
 
