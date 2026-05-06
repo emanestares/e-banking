@@ -412,7 +412,7 @@
                 <div class="form-group">
                   <label ng-class="{'label-error': transferFieldErrors.receiverAccountNumber}">
                     To Account Number
-                    <span class="required-asterisk" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
+                    <span class="required-asterisk" style="color:red" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
                   </label>
                   <input type="text"
                          ng-model="transfer.receiverAccountNumber"
@@ -430,15 +430,42 @@
               <!-- Transfer Details -->
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-money-bill-wave"></i> Transfer Details</div>
+
                 <div class="form-group">
-                  <label>Amount (&#8369;)</label>
-                  <div class="amount-input-wrap">
+                  <!-- 1. Label highlights and asterisk for amount -->
+                  <label ng-class="{'label-error': transferFieldErrors.amount}">
+                    Amount (&#8369;)
+                    <span class="required-asterisk" ng-if="transferFieldErrors.amount">*</span>
+                  </label>
+
+                  <!-- 2. Amount Input with validation styling -->
+                  <div class="amount-input-wrap" ng-class="{'is-invalid': transferFieldErrors.amount}">
                     <span class="amount-prefix">&#8369;</span>
-                    <input type="number" ng-model="transfer.amount" class="form-control amount-input" placeholder="0.00" min="1" step="0.01">
+                    <input type="number"
+                           ng-model="transfer.amount"
+                           class="form-control amount-input"
+                           ng-class="{'is-invalid': transferFieldErrors.amount}"
+                           placeholder="0.00"
+                           min="1"
+                           step="0.01">
                   </div>
+
+                  <!-- 3. Validation message from GlobalExceptionHandler -->
+                  <small class="text-danger" ng-if="transferFieldErrors.amount">
+                    {{ transferFieldErrors.amount }}
+                  </small>
                 </div>
-                <div class="form-group"><label>Description (Optional)</label>
-                  <textarea ng-model="transfer.description" class="form-control" rows="2" placeholder="Add a note for this transfer"></textarea>
+
+                <div class="form-group">
+                  <label ng-class="{'label-error': transferFieldErrors.description}">Description (Optional)</label>
+                  <textarea ng-model="transfer.description"
+                            class="form-control"
+                            ng-class="{'is-invalid': transferFieldErrors.description}"
+                            rows="2"
+                            placeholder="Add a note for this transfer"></textarea>
+                  <small class="text-danger" ng-if="transferFieldErrors.description">
+                    {{ transferFieldErrors.description }}
+                  </small>
                 </div>
               </div>
 
@@ -553,7 +580,7 @@
       <!-- ENROLL ACCOUNT PAGE -->
       <div ng-if="currentPage==='enroll'">
         <div class="enroll-page-wrap">
-          <!-- Hero -->
+          <!-- Hero Section -->
           <div class="enroll-hero">
             <div class="enroll-hero-icon"><i class="fas fa-circle-plus"></i></div>
             <div class="enroll-hero-text">
@@ -569,10 +596,17 @@
               <h3>Account Enrolled!</h3>
               <p>Your new account has been successfully created and linked to your profile.</p>
               <div class="enroll-account-badge">{{ enrollSuccess.accountNumber }}</div>
-              <div style="color:var(--gray-500);font-size:.84rem;">Type: <strong>{{ enrollSuccess.accountType }}</strong> &bull; Initial Deposit: <strong>{{ enrollSuccess.initialDeposit | currency:'₱' }}</strong></div>
+              <div style="color:var(--gray-500);font-size:.84rem;">
+                Type: <strong>{{ enrollSuccess.accountType }}</strong> &bull;
+                Initial Balance: <strong>{{ enrollSuccess.balance | currency:'₱' }}</strong>
+              </div>
               <div style="display:flex;gap:1rem;margin-top:.75rem;">
-                <button class="btn btn-outline" ng-click="navigate('accounts')"><i class="fas fa-credit-card"></i> View My Accounts</button>
-                <button class="btn btn-primary" ng-click="resetEnroll()"><i class="fas fa-plus"></i> Enroll Another</button>
+                <button class="btn btn-outline" ng-click="navigate('accounts')">
+                  <i class="fas fa-credit-card"></i> View My Accounts
+                </button>
+                <button class="btn btn-primary" ng-click="resetEnroll()">
+                  <i class="fas fa-plus"></i> Enroll Another
+                </button>
               </div>
             </div>
           </div>
@@ -580,11 +614,18 @@
           <!-- Enroll Form -->
           <div ng-if="!enrollSuccess">
             <!-- Account Type Selection -->
-            <div class="card">
-              <div class="card-header"><h3><i class="fas fa-layer-group"></i> Select Account Type</h3></div>
+            <div class="card" ng-class="{'border-danger': enrollFieldErrors.accountType}">
+              <div class="card-header">
+                <h3 ng-class="{'label-error': enrollFieldErrors.accountType}">
+                  <i class="fas fa-layer-group"></i> Select Account Type
+                  <span class="required-asterisk" ng-if="enrollFieldErrors.accountType">*</span>
+                </h3>
+              </div>
               <div class="card-body">
                 <div class="enroll-type-grid">
-                  <div class="enroll-type-card" ng-class="{selected: enrollData.accountType==='SAVINGS'}" ng-click="enrollData.accountType='SAVINGS'">
+                  <div class="enroll-type-card"
+                       ng-class="{selected: enrollData.accountType==='SAVINGS', 'is-invalid': enrollFieldErrors.accountType}"
+                       ng-click="enrollData.accountType='SAVINGS'">
                     <div class="enroll-type-icon savings"><i class="fas fa-piggy-bank"></i></div>
                     <div>
                       <div class="enroll-type-label">Savings Account</div>
@@ -592,7 +633,9 @@
                     </div>
                     <div class="enroll-radio"></div>
                   </div>
-                  <div class="enroll-type-card" ng-class="{selected: enrollData.accountType==='CHECKING'}" ng-click="enrollData.accountType='CHECKING'">
+                  <div class="enroll-type-card"
+                       ng-class="{selected: enrollData.accountType==='CHECKING', 'is-invalid': enrollFieldErrors.accountType}"
+                       ng-click="enrollData.accountType='CHECKING'">
                     <div class="enroll-type-icon checking"><i class="fas fa-money-check-dollar"></i></div>
                     <div>
                       <div class="enroll-type-label">Checking Account</div>
@@ -601,6 +644,9 @@
                     <div class="enroll-radio"></div>
                   </div>
                 </div>
+                <small class="text-danger" ng-if="enrollFieldErrors.accountType">
+                  {{ enrollFieldErrors.accountType }}
+                </small>
               </div>
             </div>
 
@@ -609,44 +655,40 @@
               <div class="card-header"><h3><i class="fas fa-file-lines"></i> Account Details</h3></div>
               <div class="card-body">
                 <div class="enroll-form-section">
-                  <div class="enroll-form-title"><i class="fas fa-user-circle"></i> Owner Information</div>
-                  <div class="enroll-form-grid">
-                    <div class="form-group">
-                      <label><i class="fas fa-id-badge"></i>&nbsp; Account Holder</label>
-                      <input type="text" class="form-control" ng-model="enrollData.ownerFullName" placeholder="Full name of account holder" required>
-                    </div>
-                    <div class="form-group">
-                      <label><i class="fas fa-envelope"></i>&nbsp; Email Address</label>
-                      <input type="email" class="form-control" ng-model="enrollData.ownerEmail" placeholder="email@example.com">
-                    </div>
-                    <div class="form-group">
-                      <label><i class="fas fa-phone"></i>&nbsp; Phone Number</label>
-                      <input type="tel" class="form-control" ng-model="enrollData.ownerPhone" placeholder="+63 9XX XXX XXXX">
-                    </div>
-                    <div class="form-group">
-                      <label><i class="fas fa-calendar"></i>&nbsp; Date of Birth</label>
-                      <input type="date" class="form-control" ng-model="enrollData.dateOfBirth">
-                    </div>
-                  </div>
-                </div>
-
-                <div class="enroll-form-section">
                   <div class="enroll-form-title"><i class="fas fa-coins"></i> Initial Deposit</div>
                   <div class="form-group">
-                    <label>Opening Deposit Amount (₱)</label>
+                    <label ng-class="{'label-error': enrollFieldErrors.initialDeposit}">
+                      Opening Deposit Amount (₱)
+                      <span class="required-asterisk" ng-if="enrollFieldErrors.initialDeposit">*</span>
+                    </label>
                     <div class="amount-input-wrap">
                       <span class="amount-prefix">₱</span>
-                      <input type="number" class="form-control amount-input" ng-model="enrollData.initialDeposit" placeholder="0.00" min="0" step="0.01">
+                      <input type="number"
+                             class="form-control amount-input"
+                             ng-class="{'is-invalid': enrollFieldErrors.initialDeposit}"
+                             ng-model="enrollData.initialDeposit"
+                             placeholder="0.00">
                     </div>
-                    <div style="font-size:.78rem;color:var(--gray-400);margin-top:.4rem;"><i class="fas fa-info-circle"></i> Minimum opening deposit may apply based on account type.</div>
+                    <small class="text-danger" ng-if="enrollFieldErrors.initialDeposit">
+                      {{ enrollFieldErrors.initialDeposit }}
+                    </small>
                   </div>
                   <div class="form-group">
-                    <label>Purpose / Notes (Optional)</label>
-                    <textarea class="form-control" ng-model="enrollData.purpose" rows="2" placeholder="e.g. Emergency fund, travel savings..."></textarea>
+                    <label ng-class="{'label-error': enrollFieldErrors.purpose}">Purpose / Notes</label>
+                    <textarea class="form-control"
+                              ng-class="{'is-invalid': enrollFieldErrors.purpose}"
+                              ng-model="enrollData.purpose"
+                              rows="2"
+                              placeholder="e.g. Emergency fund..."></textarea>
+                    <small class="text-danger" ng-if="enrollFieldErrors.purpose">
+                      {{ enrollFieldErrors.purpose }}
+                    </small>
                   </div>
                 </div>
 
-                <div class="alert alert-danger" ng-if="enrollError"><i class="fas fa-exclamation-circle"></i> {{ enrollError }}</div>
+                <div class="alert alert-danger" ng-if="enrollError">
+                  <i class="fas fa-exclamation-circle"></i> {{ enrollError }}
+                </div>
 
                 <div style="display:flex;gap:1rem;justify-content:flex-end;">
                   <button class="btn btn-outline" ng-click="resetEnroll()"><i class="fas fa-times"></i> Clear</button>
@@ -660,7 +702,6 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>

@@ -24,7 +24,7 @@ public class SignupRequest {
     private String fullName;
 
 
-    @NotNull(message = "Initial deposit is required")
+    @NotNull(message = "Initial deposit is required and not negative")
     @DecimalMin(value = "0.01", message = "Initial deposit must be greater than 0")
     private BigDecimal initialDeposit;
 }

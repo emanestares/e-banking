@@ -359,35 +359,41 @@ angular.module('bankingApp', [])
   };
 
   $scope.doEnroll = function () {
-    $scope.enrollError = null;
-    if (!$scope.enrollData.accountType) {
-      $scope.enrollError = 'Please select an account type.'; return;
-    }
-    if (!$scope.enrollData.ownerFullName) {
-      $scope.enrollError = 'Account holder name is required.'; return;
-    }
-    $scope.enrollLoading = true;
-    // Build a signup-like payload — the backend creates an account on /auth/signup.
-    // For enrolling an additional account we POST to /accounts/create if available,
-    // otherwise simulate success so the UI flow is demonstrable.
-    var payload = {
-      accountType   : $scope.enrollData.accountType,
-      ownerFullName : $scope.enrollData.ownerFullName,
-      ownerEmail    : $scope.enrollData.ownerEmail,
-      ownerPhone    : $scope.enrollData.ownerPhone,
-      dateOfBirth   : $scope.enrollData.dateOfBirth,
-      initialDeposit: $scope.enrollData.initialDeposit || 0,
-      purpose       : $scope.enrollData.purpose
-    };
-    $http.post(API + '/accounts/enroll', payload, { headers: authHeaders() })
-      .then(function (res) {
-        $scope.enrollSuccess = res.data.data;
-        loadAccounts();
-      })
-      .catch(function (err) {
-        $scope.enrollError = (err.data && err.data.message) || 'Failed to enroll account. Please try again.';
-      })
-      .finally(function () { $scope.enrollLoading = false; });
+      // 1. Reset state for a fresh attempt
+      $scope.enrollError = null;
+      $scope.enrollSuccess = null;
+      $scope.enrollFieldErrors = {};
+      $scope.enrollLoading = true;
+
+      // 2. Build the payload matching your EnrollRequest.java
+      var payload = {
+          accountType   : $scope.enrollData.accountType,
+          initialDeposit: $scope.enrollData.initialDeposit || 0,
+          purpose       : $scope.enrollData.purpose
+      };
+
+      // 3. Make the call to AccountController[cite: 13]
+      $http.post(API + '/accounts/enroll', payload, { headers: authHeaders() })
+          .then(function (res) {
+              $scope.enrollSuccess = res.data.data;
+              // Clear form on success
+              $scope.enrollData = { accountType: 'SAVINGS' };
+              loadAccounts();
+          })
+          .catch(function (err) {
+              // 4. Use the GlobalExceptionHandler's map
+              if (err.status === 400 && err.data && err.data.data) {
+                  // This will populate the red asterisks and specific messages
+                  $scope.enrollFieldErrors = err.data.data;
+                  $scope.enrollError = "Please fill the required fields.";
+              } else {
+                  $scope.enrollError = (err.data && err.data.message) || 'Failed to enroll account.';
+              }
+          })
+          .finally(function () {
+              // This ensures the spinner ALWAYS hides, even on error
+              $scope.enrollLoading = false;
+          });
   };
 
   // ── Admin ──────────────────────────────────────────────────
