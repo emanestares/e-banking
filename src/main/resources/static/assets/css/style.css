@@ -285,16 +285,29 @@ body {
 
 /* Credits / Debits: column layout, icon hidden, value fills card width */
 .stat-card.stat-indigo,
-.stat-card.stat-navy   { flex-direction: column; justify-content: center; gap: .25rem; padding: 1.25rem 1.5rem; }
+.stat-card.stat-navy   {
+  flex-direction: column; justify-content: space-between;
+  gap: 0; padding: 1.6rem 1.75rem; min-height: 120px;
+}
 .stat-card.stat-indigo .stat-icon,
 .stat-card.stat-navy   .stat-icon { display: none; }
 .stat-card.stat-indigo .stat-info,
-.stat-card.stat-navy   .stat-info { width: 100%; min-width: 0; }
+.stat-card.stat-navy   .stat-info { width: 100%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; flex: 1; }
+.stat-card.stat-indigo .stat-label,
+.stat-card.stat-navy   .stat-label {
+  font-size: .72rem; letter-spacing: 1.2px; opacity: .7;
+  text-transform: uppercase; font-weight: 600; margin-bottom: .6rem;
+}
 .stat-card.stat-indigo .stat-value,
 .stat-card.stat-navy   .stat-value {
-  font-size: clamp(1.1rem, 9cqi, 2.2rem);
+  font-size: clamp(1.55rem, 10cqi, 2.8rem);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-top: .2rem; letter-spacing: -.5px;
+  letter-spacing: -1.5px; line-height: 1; font-weight: 800;
+  flex: 1; display: flex; align-items: center;
+}
+.stat-card.stat-indigo .stat-sub,
+.stat-card.stat-navy   .stat-sub {
+  font-size: .72rem; margin-top: .75rem; opacity: .5; white-space: nowrap;
 }
 
 .stat-icon {
@@ -513,3 +526,79 @@ textarea.form-control { resize: vertical; }
 .empty-state i { font-size: 2.5rem; }
 .empty-state p { font-size: .875rem; }
 .text-center { text-align: center; }
+/* ── HIDE/SHOW BALANCE ─────────────────────────────────────── */
+.balance-toggle-btn {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.6); cursor: pointer; border-radius: 8px;
+  padding: .3rem .55rem; font-size: .8rem; transition: all .15s;
+  line-height: 1; margin-left: .5rem; vertical-align: middle;
+}
+.balance-toggle-btn:hover { background: rgba(255,255,255,.2); color: var(--white); }
+.balance-hidden { filter: blur(8px); user-select: none; pointer-events: none; transition: filter .25s; }
+.balance-shown  { filter: none; transition: filter .25s; }
+
+/* ── ENROLL ACCOUNT PAGE ──────────────────────────────────── */
+.enroll-page-wrap { max-width: 680px; margin: 0 auto; }
+.enroll-hero {
+  background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 60%, var(--navy-600) 100%);
+  border-radius: 20px; padding: 2rem 2.25rem; margin-bottom: 1.75rem; color: var(--white);
+  display: flex; align-items: center; gap: 1.5rem; overflow: hidden; position: relative;
+  box-shadow: 0 8px 32px rgba(6,13,31,.2);
+}
+.enroll-hero::after {
+  content: ''; position: absolute; right: -40px; top: -50px; width: 200px; height: 200px;
+  border-radius: 50%; background: radial-gradient(circle, rgba(201,168,76,.15) 0%, transparent 70%);
+}
+.enroll-hero-icon {
+  width: 60px; height: 60px; border-radius: 18px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gold-500), var(--gold-300));
+  color: var(--navy-900); display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; box-shadow: 0 8px 24px rgba(201,168,76,.35);
+}
+.enroll-hero-text h3 { font-size: 1.25rem; font-weight: 700; }
+.enroll-hero-text p  { font-size: .84rem; color: rgba(255,255,255,.55); margin-top: .3rem; }
+
+.enroll-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.enroll-type-card {
+  padding: 1.1rem 1.25rem; border: 2px solid var(--gray-200); border-radius: 14px;
+  cursor: pointer; transition: all .15s; background: var(--white);
+  display: flex; align-items: center; gap: .85rem;
+}
+.enroll-type-card:hover { border-color: var(--navy-600); box-shadow: var(--shadow); }
+.enroll-type-card.selected { border-color: var(--navy-700); background: rgba(15,30,61,.04); }
+.enroll-type-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.enroll-type-icon.savings  { background: rgba(6,182,212,.12); color: var(--cyan-500); }
+.enroll-type-icon.checking { background: rgba(201,168,76,.12); color: var(--gold-500); }
+.enroll-type-label { font-size: .85rem; font-weight: 600; color: var(--gray-900); }
+.enroll-type-desc  { font-size: .75rem; color: var(--gray-400); margin-top: .15rem; }
+
+.enroll-radio { margin-left: auto; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gray-300); flex-shrink: 0; position: relative; transition: all .15s; }
+.enroll-type-card.selected .enroll-radio { border-color: var(--navy-700); background: var(--navy-700); }
+.enroll-type-card.selected .enroll-radio::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; border-radius: 50%; background: white; }
+
+.enroll-form-section { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.enroll-form-title { font-size: .8rem; font-weight: 600; color: var(--navy-700); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem; }
+.enroll-form-title i { color: var(--gold-500); }
+.enroll-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 600px) { .enroll-form-grid { grid-template-columns: 1fr; } .enroll-type-grid { grid-template-columns: 1fr; } }
+
+.enroll-success {
+  text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.enroll-success-icon {
+  width: 72px; height: 72px; border-radius: 50%; background: rgba(16,185,129,.1);
+  color: var(--emerald-500); display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; margin-bottom: .5rem; border: 2px solid rgba(16,185,129,.2);
+}
+.enroll-success h3 { font-size: 1.3rem; font-weight: 700; color: var(--gray-900); }
+.enroll-success p  { color: var(--gray-500); font-size: .875rem; max-width: 340px; }
+.enroll-account-badge {
+  background: var(--navy-900); color: var(--gold-300); font-family: 'DM Mono', monospace;
+  padding: .6rem 1.4rem; border-radius: 10px; font-size: 1rem; font-weight: 600;
+  letter-spacing: 1px; margin: .25rem 0;
+}
+
+/* ── FAVICON SVG in tab (referenced from link tag) ─────────── */

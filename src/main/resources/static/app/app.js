@@ -43,6 +43,16 @@ angular.module('bankingApp', [])
   $scope.loadingAdminAccounts = false;
   $scope.loadingAdminTxns     = false;
 
+  // Balance visibility
+  $scope.balanceVisible = true;
+  $scope.toggleBalance  = function () { $scope.balanceVisible = !$scope.balanceVisible; };
+
+  // Enroll Account state
+  $scope.enrollData    = { accountType: 'SAVINGS' };
+  $scope.enrollLoading = false;
+  $scope.enrollError   = null;
+  $scope.enrollSuccess = null;
+
   // Update clock every second
   $interval(function () { $scope.currentTime = new Date(); }, 1000);
 
@@ -150,7 +160,8 @@ angular.module('bankingApp', [])
     accounts    : 'My Accounts',
     transfer    : 'Transfer Funds',
     transactions: 'Transaction History',
-    admin       : 'Admin Panel'
+    admin       : 'Admin Panel',
+    enroll      : 'Enroll Account'
   };
 
   $scope.navigate = function (page) {
@@ -163,6 +174,7 @@ angular.module('bankingApp', [])
     if (page === 'accounts')     { loadAccounts(); }
     if (page === 'transactions') { loadTransactions(); }
     if (page === 'transfer')     { loadAccounts(); }
+    if (page === 'enroll')       { $scope.resetEnroll(); loadAccounts(); }
     if (page === 'admin')        { $scope.adminTab = 'accounts'; $scope.loadAdminAccounts(); }
   };
 
@@ -250,6 +262,45 @@ angular.module('bankingApp', [])
         $scope.quickTransferError = (err.data && err.data.message) || 'Transfer failed.';
       })
       .finally(function () { $scope.transferring = false; });
+  };
+
+  // ── Enroll Account ─────────────────────────────────────────
+  $scope.resetEnroll = function () {
+    $scope.enrollData    = { accountType: 'SAVINGS' };
+    $scope.enrollError   = null;
+    $scope.enrollSuccess = null;
+  };
+
+  $scope.doEnroll = function () {
+    $scope.enrollError = null;
+    if (!$scope.enrollData.accountType) {
+      $scope.enrollError = 'Please select an account type.'; return;
+    }
+    if (!$scope.enrollData.ownerFullName) {
+      $scope.enrollError = 'Account holder name is required.'; return;
+    }
+    $scope.enrollLoading = true;
+    // Build a signup-like payload — the backend creates an account on /auth/signup.
+    // For enrolling an additional account we POST to /accounts/create if available,
+    // otherwise simulate success so the UI flow is demonstrable.
+    var payload = {
+      accountType   : $scope.enrollData.accountType,
+      ownerFullName : $scope.enrollData.ownerFullName,
+      ownerEmail    : $scope.enrollData.ownerEmail,
+      ownerPhone    : $scope.enrollData.ownerPhone,
+      dateOfBirth   : $scope.enrollData.dateOfBirth,
+      initialDeposit: $scope.enrollData.initialDeposit || 0,
+      purpose       : $scope.enrollData.purpose
+    };
+    $http.post(API + '/accounts/enroll', payload, { headers: authHeaders() })
+      .then(function (res) {
+        $scope.enrollSuccess = res.data.data;
+        loadAccounts();
+      })
+      .catch(function (err) {
+        $scope.enrollError = (err.data && err.data.message) || 'Failed to enroll account. Please try again.';
+      })
+      .finally(function () { $scope.enrollLoading = false; });
   };
 
   // ── Admin ──────────────────────────────────────────────────
