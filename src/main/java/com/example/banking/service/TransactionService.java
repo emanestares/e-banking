@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,44 +33,42 @@ public class TransactionService {
     @Transactional
     public TransferResponse transfer(TransferRequest request, String requestingUsername) {
 
+        // 1. Same-account check (Prevent unnecessary DB hits)
         if (request.getSenderAccountNumber().equals(request.getReceiverAccountNumber())) {
-            throw new IllegalArgumentException("Cannot transfer to the same account");
+            throw new IllegalArgumentException("You cannot transfer money to the same account.");
         }
 
-        Account sender = accountRepository
-                .findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
-                .orElseThrow(() -> new RuntimeException(
-                        "Sender account not found: " + request.getSenderAccountNumber()));
+        // 2. Fetch both accounts once (Using active-only lookup)
+        Account sender = accountRepository.findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
+                .orElseThrow(() -> new NoSuchElementException("The source account does not exist or is inactive."));
 
-        Account receiver = accountRepository
-                .findByAccountNumberAndIsActiveTrue(request.getReceiverAccountNumber())
-                .orElseThrow(() -> new RuntimeException(
-                        "Receiver account not found: " + request.getReceiverAccountNumber()));
+        Account receiver = accountRepository.findByAccountNumberAndIsActiveTrue(request.getReceiverAccountNumber())
+                .orElseThrow(() -> new NoSuchElementException("The destination account number does not exist or is inactive."));
 
-        // Authorization: sender must belong to requesting user (unless admin)
+        // 3. Authorization: Ensure requester owns sender account (unless Admin)
         if (!sender.getUser().getUsername().equals(requestingUsername)) {
             boolean isAdmin = userRepository.findByUsername(requestingUsername)
                     .map(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN")))
                     .orElse(false);
             if (!isAdmin) {
-                throw new AccessDeniedException("You do not own this account");
+                throw new AccessDeniedException("You do not own this account.");
             }
         }
 
-        // Sufficient funds check
+        // 4. Sufficient funds check
         if (sender.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new IllegalStateException("Insufficient funds. Available: "
-                    + sender.getBalance() + ", Requested: " + request.getAmount());
+            throw new IllegalStateException("Insufficient funds. Available: " + sender.getBalance());
         }
 
-        // Debit sender, credit receiver
+        // 5. Update balances
         sender.setBalance(sender.getBalance().subtract(request.getAmount()));
         receiver.setBalance(receiver.getBalance().add(request.getAmount()));
 
+        // Changes persist automatically due to @Transactional; explicit save ensures immediate flush
         accountRepository.save(sender);
         accountRepository.save(receiver);
 
-        // Create transaction record
+        // 6. Create transaction record
         String refNumber = generateReferenceNumber();
         Transaction txn = Transaction.builder()
                 .referenceNumber(refNumber)
@@ -83,7 +82,7 @@ public class TransactionService {
 
         transactionRepository.save(txn);
 
-        // Build response
+        // 7. Build Response
         TransferResponse response = new TransferResponse();
         response.setReferenceNumber(refNumber);
         response.setStatus("COMPLETED");
@@ -91,7 +90,7 @@ public class TransactionService {
         response.setSenderAccountNumber(sender.getAccountNumber());
         response.setReceiverAccountNumber(receiver.getAccountNumber());
         response.setDescription(request.getDescription());
-        response.setTransactionDate(txn.getCreatedAt());
+        response.setTransactionDate(txn.getCreatedAt() != null ? txn.getCreatedAt() : LocalDateTime.now());
         response.setNewSenderBalance(sender.getBalance());
         return response;
     }

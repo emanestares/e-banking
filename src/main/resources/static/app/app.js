@@ -269,7 +269,14 @@ angular.module('bankingApp', [])
         loadTransactions();
       })
       .catch(function (err) {
-        $scope.transferError = (err.data && err.data.message) || 'Transfer failed.';
+        // If the backend throws NoSuchElementException, this message
+            // will be "The destination account number does not exist..."
+            $scope.quickTransferError = (err.data && err.data.message) || 'Transfer failed.';
+
+            // If the error specifically mentions the receiver account, highlight that field
+            if (err.data && err.data.message && err.data.message.contains("destination")) {
+                $scope.quickTransferFieldErrors.receiverAccountNumber = true;
+            }
       })
       .finally(function () { $scope.transferring = false; });
   };
@@ -281,21 +288,54 @@ angular.module('bankingApp', [])
     $scope.senderBalance   = null;
   };
 
+  // Initialize error object
+  $scope.quickTransferFieldErrors = {};
+
+  // Updated helper to handle both Signup and Transfer errors
+  $scope.clearFieldError = function(fieldName, errorObject) {
+      if ($scope[errorObject] && $scope[errorObject][fieldName]) {
+          delete $scope[errorObject][fieldName];
+      }
+  };
+
   $scope.doQuickTransfer = function () {
-    $scope.quickTransferError   = null;
-    $scope.quickTransferSuccess = null;
-    $scope.transferring         = true;
-    $http.post(API + '/transactions/transfer', $scope.quickTransfer, { headers: authHeaders() })
-      .then(function (res) {
-        $scope.quickTransferSuccess = 'Transfer successful! Ref: ' + res.data.data.referenceNumber;
-        $scope.quickTransfer = {};
-        loadAccounts();
-        loadTransactions();
-      })
-      .catch(function (err) {
-        $scope.quickTransferError = (err.data && err.data.message) || 'Transfer failed.';
-      })
-      .finally(function () { $scope.transferring = false; });
+      // 1. Reset errors
+      $scope.quickTransferError = null;
+      $scope.quickTransferSuccess = null;
+      $scope.quickTransferFieldErrors = {};
+
+      // 2. Manual Validation
+      var hasError = false;
+      if (!$scope.quickTransfer.senderAccountNumber)   { $scope.quickTransferFieldErrors.senderAccountNumber = true; hasError = true; }
+      if (!$scope.quickTransfer.receiverAccountNumber) { $scope.quickTransferFieldErrors.receiverAccountNumber = true; hasError = true; }
+
+      // Amount check (Must be entered and > 0)
+      if (!$scope.quickTransfer.amount || $scope.quickTransfer.amount <= 0) {
+          $scope.quickTransferFieldErrors.amount = true;
+          hasError = true;
+      }
+
+      if (hasError) {
+          $scope.quickTransferError = 'Please fill in all required fields with valid inputs.';
+          return;
+      }
+
+      // 3. Proceed with API call
+      $scope.transferring = true;
+      $http.post(API + '/transactions/transfer', $scope.quickTransfer, { headers: authHeaders() })
+        .then(function (res) {
+          $scope.quickTransferSuccess = 'Transfer successful! Ref: ' + res.data.data.referenceNumber;
+          $scope.quickTransfer = {};
+          loadAccounts();
+          loadTransactions();
+        })
+        .catch(function (err) {
+          if (err.data && err.data.data) {
+              $scope.quickTransferFieldErrors = err.data.data; // Capture backend validation
+          }
+          $scope.quickTransferError = (err.data && err.data.message) || 'Transfer failed.';
+        })
+        .finally(function () { $scope.transferring = false; });
   };
 
   // ── Admin ──────────────────────────────────────────────────

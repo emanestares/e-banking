@@ -100,10 +100,12 @@
         </label>
         <input type="password" ng-model="signupData.password" class="form-control" required>
       </div>
+
       <div class="form-group">
         <label><i class="fas fa-lock"></i>&nbsp; Confirm Password</label>
         <input type="password" ng-model="signupData.confirmPassword" placeholder="Repeat your password" class="form-control" required>
       </div>
+
       <div class="form-group">
         <label><i class="fas fa-coins"></i>&nbsp; Initial Deposit (&#8369;) <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
         <input type="number" ng-model="signupData.initialDeposit" placeholder="0.00" class="form-control" min="0" step="0.01">
@@ -261,21 +263,41 @@
           <div class="card-body">
             <div class="quick-transfer-form">
               <div class="form-row">
+                <!-- From Account -->
                 <div class="form-group">
-                  <label>From Account</label>
-                  <select ng-model="quickTransfer.senderAccountNumber" class="form-control">
+                  <label ng-class="{'text-danger': quickTransferFieldErrors.senderAccountNumber}">
+                    From Account <span style="color:red" ng-if="quickTransferFieldErrors.senderAccountNumber">*</span>
+                  </label>
+                  <select ng-model="quickTransfer.senderAccountNumber"
+                          ng-change="clearFieldError('senderAccountNumber', 'quickTransferFieldErrors')"
+                          class="form-control">
                     <option value="" disabled>Select account</option>
-                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} ({{ acc.balance | currency:'₱' }})</option>
+                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">
+                      {{ acc.accountNumber }} ({{ acc.balance | currency:'₱' }})
+                    </option>
                   </select>
                 </div>
+
+                <!-- To Account -->
                 <div class="form-group">
-                  <label>To Account Number</label>
-                  <input type="text" ng-model="quickTransfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002">
+                  <label ng-class="{'text-danger': quickTransferFieldErrors.receiverAccountNumber}">
+                    To Account Number <span style="color:red" ng-if="quickTransferFieldErrors.receiverAccountNumber">*</span>
+                  </label>
+                  <input type="text" ng-model="quickTransfer.receiverAccountNumber"
+                         ng-change="clearFieldError('receiverAccountNumber', 'quickTransferFieldErrors')"
+                         class="form-control" placeholder="e.g. ACC-00002">
                 </div>
+
+                <!-- Amount -->
                 <div class="form-group">
-                  <label>Amount (&#8369;)</label>
-                  <input type="number" ng-model="quickTransfer.amount" class="form-control" placeholder="0.00" min="1">
+                  <label ng-class="{'text-danger': quickTransferFieldErrors.amount}">
+                    Amount (&#8369;) <span style="color:red" ng-if="quickTransferFieldErrors.amount">*</span>
+                  </label>
+                  <input type="number" ng-model="quickTransfer.amount"
+                         ng-change="clearFieldError('amount', 'quickTransferFieldErrors')"
+                         class="form-control" placeholder="0.00" min="0.01" step="0.01">
                 </div>
+
                 <div class="form-group">
                   <label>Description</label>
                   <input type="text" ng-model="quickTransfer.description" class="form-control" placeholder="Optional note">
@@ -362,36 +384,78 @@
           <div class="card-header"><h3><i class="fas fa-arrow-right-arrow-left"></i> Fund Transfer</h3></div>
           <div class="card-body">
             <div class="transfer-form">
+
+              <!-- Sender Information -->
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-paper-plane"></i> Sender Information</div>
-                <div class="form-group"><label>From Account</label>
+                <div class="form-group">
+                  <label>From Account</label>
                   <select ng-model="transfer.senderAccountNumber" class="form-control" ng-change="getSenderBalance()">
                     <option value="" disabled>Select your account</option>
-                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">{{ acc.accountNumber }} - {{ acc.accountType }} ({{ acc.balance | currency:'₱' }})</option>
+                    <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">
+                      {{ acc.accountNumber }} - {{ acc.accountType }} ({{ acc.balance | currency:'₱' }})
+                    </option>
                   </select>
                 </div>
-                <div class="balance-preview" ng-if="senderBalance !== null">Available Balance: <strong>{{ senderBalance | currency:'₱' }}</strong></div>
+                <div class="balance-preview" ng-if="senderBalance !== null">
+                  Available Balance: <strong>{{ senderBalance | currency:'₱' }}</strong>
+                </div>
               </div>
+
               <div class="transfer-arrow"><i class="fas fa-arrow-down"></i></div>
+
+              <!-- Recipient Information -->
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-inbox"></i> Recipient Information</div>
-                <div class="form-group"><label>To Account Number</label><input type="text" ng-model="transfer.receiverAccountNumber" class="form-control" placeholder="e.g. ACC-00002"></div>
+                <div class="form-group">
+                  <label>
+                    To Account Number
+                    <!-- Red asterisk shows if the field is flagged by your controller/service error[cite: 1] -->
+                    <span class="text-danger" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
+                  </label>
+                  <input type="text"
+                         ng-model="transfer.receiverAccountNumber"
+                         class="form-control"
+                         ng-class="{'is-invalid': transferFieldErrors.receiverAccountNumber}"
+                         placeholder="e.g. ACC-00002"
+                         ng-change="transferFieldErrors.receiverAccountNumber = false">
+                  <small class="text-danger" ng-if="transferFieldErrors.receiverAccountNumber">
+                    Please enter a valid, active account number.
+                  </small>
+                </div>
               </div>
+
+              <!-- Transfer Details -->
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-money-bill-wave"></i> Transfer Details</div>
-                <div class="form-group"><label>Amount (&#8369;)</label>
-                  <div class="amount-input-wrap"><span class="amount-prefix">&#8369;</span><input type="number" ng-model="transfer.amount" class="form-control amount-input" placeholder="0.00" min="1" step="0.01"></div>
+                <div class="form-group">
+                  <label>Amount (&#8369;)</label>
+                  <div class="amount-input-wrap">
+                    <span class="amount-prefix">&#8369;</span>
+                    <input type="number" ng-model="transfer.amount" class="form-control amount-input" placeholder="0.00" min="1" step="0.01">
+                  </div>
                 </div>
-                <div class="form-group"><label>Description (Optional)</label><textarea ng-model="transfer.description" class="form-control" rows="2" placeholder="Add a note for this transfer"></textarea></div>
+                <div class="form-group"><label>Description (Optional)</label>
+                  <textarea ng-model="transfer.description" class="form-control" rows="2" placeholder="Add a note for this transfer"></textarea>
+                </div>
               </div>
-              <div class="alert alert-success" ng-if="transferSuccess"><i class="fas fa-check-circle"></i> {{ transferSuccess.message }}
+
+              <!-- Success Alert -->
+              <div class="alert alert-success" ng-if="transferSuccess">
+                <i class="fas fa-check-circle"></i> {{ transferSuccess.message }}
                 <div class="txn-detail-box" ng-if="transferSuccess.data">
                   <div>Reference: <strong>{{ transferSuccess.data.referenceNumber }}</strong></div>
                   <div>Amount: <strong>{{ transferSuccess.data.amount | currency:'₱' }}</strong></div>
                   <div>New Balance: <strong>{{ transferSuccess.data.newSenderBalance | currency:'₱' }}</strong></div>
                 </div>
               </div>
-              <div class="alert alert-danger" ng-if="transferError"><i class="fas fa-exclamation-circle"></i> {{ transferError }}</div>
+
+              <!-- Error Alert -->
+              <div class="alert alert-danger" ng-if="transferError">
+                <i class="fas fa-exclamation-circle"></i> {{ transferError }}
+              </div>
+
+              <!-- Actions -->
               <div class="transfer-actions">
                 <button class="btn btn-outline" ng-click="clearTransfer()"><i class="fas fa-times"></i> Clear</button>
                 <button class="btn btn-primary" ng-click="doTransfer()" ng-disabled="transferring">
@@ -399,12 +463,13 @@
                   <span ng-if="transferring"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TRANSACTIONS PAGE -->
+      <!-- TRANSACTIONS HISTORY -->
       <div ng-if="currentPage==='transactions'">
         <div class="card">
           <div class="card-header">
