@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 </head>
 <body ng-controller="AppController">
 
@@ -144,6 +145,7 @@
         <li ng-class="{active: currentPage==='accounts'}"><a ng-click="navigate('accounts')"><i class="fas fa-credit-card"></i><span>My Accounts</span></a></li>
         <li ng-class="{active: currentPage==='transfer'}"><a ng-click="navigate('transfer')"><i class="fas fa-arrow-right-arrow-left"></i><span>Transfer Funds</span></a></li>
         <li ng-class="{active: currentPage==='transactions'}"><a ng-click="navigate('transactions')"><i class="fas fa-clock-rotate-left"></i><span>Transactions</span></a></li>
+        <li ng-class="{active: currentPage==='enroll'}"><a ng-click="navigate('enroll')"><i class="fas fa-circle-plus"></i><span>Enroll Account</span></a></li>
         <li ng-class="{active: currentPage==='admin'}" ng-if="isAdmin()"><a ng-click="navigate('admin')"><i class="fas fa-shield-halved"></i><span>Admin Panel</span></a></li>
       </ul>
     </nav>
@@ -175,8 +177,8 @@
             <p>Here's an overview of your finances today.</p>
           </div>
           <div class="greeting-badge">
-            <div class="greeting-badge-label">Total Balance</div>
-            <div class="greeting-badge-value">{{ totalBalance | currency:'₱' }}</div>
+            <div class="greeting-badge-label">Total Balance <button class="balance-toggle-btn" ng-click="toggleBalance()" title="{{balanceVisible ? 'Hide' : 'Show'}} balance"><i class="fas" ng-class="balanceVisible ? 'fa-eye-slash' : 'fa-eye'"></i></button></div>
+            <div class="greeting-badge-value" ng-class="balanceVisible ? 'balance-shown' : 'balance-hidden'">{{ totalBalance | currency:'₱' }}</div>
           </div>
         </div>
 
@@ -543,6 +545,117 @@
                 <tr ng-if="adminTransactions.length===0"><td colspan="7" class="empty-row text-center">No transactions found</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENROLL ACCOUNT PAGE -->
+      <div ng-if="currentPage==='enroll'">
+        <div class="enroll-page-wrap">
+          <!-- Hero -->
+          <div class="enroll-hero">
+            <div class="enroll-hero-icon"><i class="fas fa-circle-plus"></i></div>
+            <div class="enroll-hero-text">
+              <h3>Enroll Another Account</h3>
+              <p>Open a new savings or checking account linked to your profile.</p>
+            </div>
+          </div>
+
+          <!-- Success State -->
+          <div class="card" ng-if="enrollSuccess">
+            <div class="card-body enroll-success">
+              <div class="enroll-success-icon"><i class="fas fa-check"></i></div>
+              <h3>Account Enrolled!</h3>
+              <p>Your new account has been successfully created and linked to your profile.</p>
+              <div class="enroll-account-badge">{{ enrollSuccess.accountNumber }}</div>
+              <div style="color:var(--gray-500);font-size:.84rem;">Type: <strong>{{ enrollSuccess.accountType }}</strong> &bull; Initial Deposit: <strong>{{ enrollSuccess.initialDeposit | currency:'₱' }}</strong></div>
+              <div style="display:flex;gap:1rem;margin-top:.75rem;">
+                <button class="btn btn-outline" ng-click="navigate('accounts')"><i class="fas fa-credit-card"></i> View My Accounts</button>
+                <button class="btn btn-primary" ng-click="resetEnroll()"><i class="fas fa-plus"></i> Enroll Another</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enroll Form -->
+          <div ng-if="!enrollSuccess">
+            <!-- Account Type Selection -->
+            <div class="card">
+              <div class="card-header"><h3><i class="fas fa-layer-group"></i> Select Account Type</h3></div>
+              <div class="card-body">
+                <div class="enroll-type-grid">
+                  <div class="enroll-type-card" ng-class="{selected: enrollData.accountType==='SAVINGS'}" ng-click="enrollData.accountType='SAVINGS'">
+                    <div class="enroll-type-icon savings"><i class="fas fa-piggy-bank"></i></div>
+                    <div>
+                      <div class="enroll-type-label">Savings Account</div>
+                      <div class="enroll-type-desc">Earn interest on your deposits</div>
+                    </div>
+                    <div class="enroll-radio"></div>
+                  </div>
+                  <div class="enroll-type-card" ng-class="{selected: enrollData.accountType==='CHECKING'}" ng-click="enrollData.accountType='CHECKING'">
+                    <div class="enroll-type-icon checking"><i class="fas fa-money-check-dollar"></i></div>
+                    <div>
+                      <div class="enroll-type-label">Checking Account</div>
+                      <div class="enroll-type-desc">Everyday spending & transfers</div>
+                    </div>
+                    <div class="enroll-radio"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Account Details -->
+            <div class="card">
+              <div class="card-header"><h3><i class="fas fa-file-lines"></i> Account Details</h3></div>
+              <div class="card-body">
+                <div class="enroll-form-section">
+                  <div class="enroll-form-title"><i class="fas fa-user-circle"></i> Owner Information</div>
+                  <div class="enroll-form-grid">
+                    <div class="form-group">
+                      <label><i class="fas fa-id-badge"></i>&nbsp; Account Holder</label>
+                      <input type="text" class="form-control" ng-model="enrollData.ownerFullName" placeholder="Full name of account holder" required>
+                    </div>
+                    <div class="form-group">
+                      <label><i class="fas fa-envelope"></i>&nbsp; Email Address</label>
+                      <input type="email" class="form-control" ng-model="enrollData.ownerEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                      <label><i class="fas fa-phone"></i>&nbsp; Phone Number</label>
+                      <input type="tel" class="form-control" ng-model="enrollData.ownerPhone" placeholder="+63 9XX XXX XXXX">
+                    </div>
+                    <div class="form-group">
+                      <label><i class="fas fa-calendar"></i>&nbsp; Date of Birth</label>
+                      <input type="date" class="form-control" ng-model="enrollData.dateOfBirth">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="enroll-form-section">
+                  <div class="enroll-form-title"><i class="fas fa-coins"></i> Initial Deposit</div>
+                  <div class="form-group">
+                    <label>Opening Deposit Amount (₱)</label>
+                    <div class="amount-input-wrap">
+                      <span class="amount-prefix">₱</span>
+                      <input type="number" class="form-control amount-input" ng-model="enrollData.initialDeposit" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <div style="font-size:.78rem;color:var(--gray-400);margin-top:.4rem;"><i class="fas fa-info-circle"></i> Minimum opening deposit may apply based on account type.</div>
+                  </div>
+                  <div class="form-group">
+                    <label>Purpose / Notes (Optional)</label>
+                    <textarea class="form-control" ng-model="enrollData.purpose" rows="2" placeholder="e.g. Emergency fund, travel savings..."></textarea>
+                  </div>
+                </div>
+
+                <div class="alert alert-danger" ng-if="enrollError"><i class="fas fa-exclamation-circle"></i> {{ enrollError }}</div>
+
+                <div style="display:flex;gap:1rem;justify-content:flex-end;">
+                  <button class="btn btn-outline" ng-click="resetEnroll()"><i class="fas fa-times"></i> Clear</button>
+                  <button class="btn btn-primary" ng-click="doEnroll()" ng-disabled="enrollLoading">
+                    <span ng-if="!enrollLoading"><i class="fas fa-circle-plus"></i> Enroll Account</span>
+                    <span ng-if="enrollLoading"><i class="fas fa-spinner fa-spin"></i> Enrolling...</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

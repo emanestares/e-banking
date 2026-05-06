@@ -2,7 +2,9 @@ package com.example.banking.controller;
 
 import com.example.banking.dto.AccountResponse;
 import com.example.banking.dto.ApiResponse;
+import com.example.banking.dto.EnrollRequest;
 import com.example.banking.service.AccountService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +27,16 @@ public class AccountController {
         List<AccountResponse> accounts =
                 accountService.getAccountsByUsername(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(accounts));
+    }
+
+    // Enroll a new additional account for the logged-in user
+    @PostMapping("/enroll")
+    public ResponseEntity<ApiResponse<AccountResponse>> enrollAccount(
+            @Valid @RequestBody EnrollRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        AccountResponse account =
+                accountService.enrollAccount(userDetails.getUsername(), request);
+        return ResponseEntity.ok(ApiResponse.ok(account));
     }
 
     // Get a specific account by number (customers can only access their own)
