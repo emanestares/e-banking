@@ -103,6 +103,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 // to know if it is a 401 or a 403 behavior
                 .anonymous(AbstractHttpConfigurer::disable)
 
