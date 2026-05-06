@@ -64,20 +64,41 @@
     </div>
     <form ng-submit="signup()" novalidate>
       <div class="form-group">
-        <label><i class="fas fa-id-card"></i>&nbsp; Full Name</label>
-        <input type="text" ng-model="signupData.fullName" placeholder="e.g. Juan dela Cruz" class="form-control" required>
+        <label ng-class="{'text-danger': signupFieldErrors.fullName}">
+          <i class="fas fa-id-card"></i>&nbsp; Full Name
+          <span class="required-asterisk" ng-if="signupFieldErrors.fullName" style="color:red">*</span>
+        </label>
+        <input type="text" ng-model="signupData.fullName" class="form-control" required>
       </div>
+      <!-- Username Field -->
       <div class="form-group">
-        <label><i class="fas fa-user"></i>&nbsp; Username</label>
-        <input type="text" ng-model="signupData.username" placeholder="Choose a username" class="form-control" required>
+        <label ng-class="{'text-danger': signupFieldErrors.username}">
+          <i class="fas fa-user"></i>&nbsp; Username
+          <span style="color:red" ng-if="signupFieldErrors.username">*</span>
+        </label>
+        <input type="text"
+               ng-model="signupData.username"
+               ng-change="clearFieldError('username')"
+               class="form-control"
+               required>
       </div>
+
+      <!-- Email Field -->
       <div class="form-group">
-        <label><i class="fas fa-envelope"></i>&nbsp; Email</label>
-        <input type="email" ng-model="signupData.email" placeholder="your@email.com" class="form-control" required>
+        <label ng-class="{'label-error': signupFieldErrors.email}">
+          <i class="fas fa-envelope"></i>&nbsp; Email
+          <span class="required-asterisk" ng-if="signupFieldErrors.email">*</span>
+        </label>
+        <input type="email" ng-model="signupData.email" class="form-control" required>
       </div>
+
+      <!-- Password Field -->
       <div class="form-group">
-        <label><i class="fas fa-lock"></i>&nbsp; Password</label>
-        <input type="password" ng-model="signupData.password" placeholder="At least 6 characters" class="form-control" required>
+        <label ng-class="{'label-error': signupFieldErrors.password}">
+          <i class="fas fa-lock"></i>&nbsp; Password
+          <span class="required-asterisk" ng-if="signupFieldErrors.password">*</span>
+        </label>
+        <input type="password" ng-model="signupData.password" class="form-control" required>
       </div>
       <div class="form-group">
         <label><i class="fas fa-lock"></i>&nbsp; Confirm Password</label>

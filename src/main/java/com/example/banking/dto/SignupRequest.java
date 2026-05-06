@@ -1,8 +1,6 @@
 package com.example.banking.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -25,5 +23,8 @@ public class SignupRequest {
     @NotBlank(message = "Full name is required")
     private String fullName;
 
+
+    @NotNull(message = "Initial deposit is required")
+    @DecimalMin(value = "0.01", message = "Initial deposit must be greater than 0")
     private BigDecimal initialDeposit;
 }

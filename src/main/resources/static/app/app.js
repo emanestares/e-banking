@@ -85,74 +85,96 @@ angular.module('bankingApp', [])
       .finally(function () { $scope.loading = false; });
   };
 
-  // ── Signup ─────────────────────────────────────────────────
-  $scope.goToSignup = function () {
-    $scope.showSignup  = true;
-    $scope.loginError  = null;
-    $scope.signupError = null;
-    $scope.signupData  = {};
-  };
-
-  $scope.goToLogin = function () {
-    $scope.showSignup  = false;
-    $scope.signupError = null;
-    $scope.loginError  = null;
-  };
-
-  $scope.signup = function () {
-   // reset errors
-    $scope.signupError = null;
-    $scope.signupFieldErrors = {};
-
-    if (!$scope.signupData.fullName || !$scope.signupData.username ||
-        !$scope.signupData.email    || !$scope.signupData.password) {
-      $scope.signupError = 'Please fill in all required fields.';
-      return;
-    }
-    if ($scope.signupData.password !== $scope.signupData.confirmPassword) {
-      $scope.signupError = 'Passwords do not match.';
-      return;
-    }
-    if ($scope.signupData.password.length < 6) {
-      $scope.signupError = 'Password must be at least 6 characters.';
-      return;
-    }
-
-    $scope.signupLoading = true;
-
-    var payload = {
-      username      : $scope.signupData.username,
-      email         : $scope.signupData.email,
-      password      : $scope.signupData.password,
-      fullName      : $scope.signupData.fullName,
-      initialDeposit: $scope.signupData.initialDeposit || 0
+// ── Signup ──────────────────────────────────────────────────
+  // ── Signup Navigation ──────────────────────────────────────
+    $scope.goToSignup = function () {
+      $scope.showSignup  = true;
+      $scope.loginError  = null;
+      $scope.signupError = null;
+      $scope.signupData  = {};
+      $scope.signupFieldErrors = {}; // Clear any previous asterisks
     };
 
-    $http.post(API + '/auth/signup', payload)
+    $scope.goToLogin = function () {
+      $scope.showSignup  = false;
+      $scope.signupError = null;
+      $scope.loginError  = null;
+    };
 
-    .then(function (res) {
-            // success → login user
-            localStorage.setItem('jwt', res.data.data.token);
-            $scope.isLoggedIn = true;
-            $scope.currentUser = res.data.data;
-            $scope.showSignup = false;
+
+  $scope.clearFieldError = function(fieldName) {
+      if ($scope.signupFieldErrors && $scope.signupFieldErrors[fieldName]) {
+          delete $scope.signupFieldErrors[fieldName];
+      }
+  };
+
+
+  $scope.signup = function () {
+      // 1. Reset errors
+      $scope.signupError = null;
+      $scope.signupFieldErrors = {};
+
+      // 2. Manual Frontend Validation: Flag specific fields
+      var hasError = false;
+
+      if (!$scope.signupData.fullName) { $scope.signupFieldErrors.fullName = true; hasError = true; }
+      if (!$scope.signupData.username) { $scope.signupFieldErrors.username = true; hasError = true; }
+      if (!$scope.signupData.email)    { $scope.signupFieldErrors.email = true;    hasError = true; }
+      if (!$scope.signupData.password) { $scope.signupFieldErrors.password = true; hasError = true; }
+
+      if (hasError) {
+          $scope.signupError = 'Please fill in all required fields.';
+          return; // Stop here
+      }
+
+      // 3. Logic checks
+      if ($scope.signupData.password !== $scope.signupData.confirmPassword) {
+          $scope.signupError = 'Passwords do not match.';
+          $scope.signupFieldErrors.confirmPassword = true; // Flag the confirm field too
+          return;
+      }
+
+      if ($scope.signupData.password.length < 6) {
+          $scope.signupError = 'Password must be at least 6 characters.';
+          $scope.signupFieldErrors.password = true;
+          return;
+      }
+
+      // Initial Deposit check
+      if (!$scope.signupData.initialDeposit || $scope.signupData.initialDeposit <= 0) {
+          $scope.signupError = 'Initial deposit must be greater than 0.';
+          $scope.signupFieldErrors.initialDeposit = true;
+          return;
+      }
+
+      // 4. Proceed to API call
+      $scope.signupLoading = true;
+      var payload = {
+          username: $scope.signupData.username,
+          email: $scope.signupData.email,
+          password: $scope.signupData.password,
+          fullName: $scope.signupData.fullName,
+          initialDeposit: $scope.signupData.initialDeposit || 0
+      };
+
+      $http.post(API + '/auth/signup', payload)
+          .then(function (res) {
+              localStorage.setItem('jwt', res.data.data.token);
+              $scope.isLoggedIn = true;
+              $scope.currentUser = res.data.data;
+              $scope.showSignup = false;
           })
-
           .catch(function (err) {
-
-            // ✅ backend validation errors
-            if (err.data && err.data.data) {
-              $scope.signupFieldErrors = err.data.data;
-              $scope.signupError = "Please fix the highlighted errors.";
-            } else {
-              $scope.signupError =
-                (err.data && err.data.message) ||
-                "Registration failed. Please try again.";
-            }
+              if (err.data && err.data.data) {
+                  // This catches backend validation (e.g. "Username already exists")
+                  $scope.signupFieldErrors = err.data.data;
+                  $scope.signupError = "Please fix the highlighted errors.";
+              } else {
+                  $scope.signupError = (err.data && err.data.message) || "Registration failed.";
+              }
           })
-
           .finally(function () {
-            $scope.signupLoading = false;
+              $scope.signupLoading = false;
           });
   };
 
