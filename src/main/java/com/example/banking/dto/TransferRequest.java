@@ -15,7 +15,7 @@ public class TransferRequest {
     private String receiverAccountNumber;
 
     @NotNull(message = "Valid Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be at least 0.01")
+    @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
     @DecimalMax(value = "10000000", message = "Amount must not exceed 10 million")
     @Digits(integer = 15, fraction = 2, message = "Invalid amount format")
     private BigDecimal amount;
