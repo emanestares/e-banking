@@ -258,16 +258,12 @@
             <div class="card-header">
               <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
               <div style="display:flex;gap:.5rem;align-items:center;">
-                <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="refreshDashboard()" title="Refresh">
-                  <i class="fas fa-rotate-right"></i>
-                </button>
+                <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="refreshDashboard()" title="Refresh"><i class="fas fa-rotate-right"></i></button>
                 <button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button>
               </div>
             </div>
             <div class="card-body">
-              <div class="loading-box" ng-if="loadingTxns">
-                <i class="fas fa-spinner fa-spin"></i> Loading...
-              </div>
+              <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
 
               <div class="txn-row" ng-repeat="t in recentTransactions | limitTo:5">
                 <div class="txn-icon" ng-class="t.direction==='CREDIT'?'txn-credit':'txn-debit'">
@@ -297,17 +293,17 @@
                 <div style="text-align: center; color: #6b7280; padding: 0.8rem;">
                   <i class="fas fa-ellipsis-h"></i>
                   <span style="font-size: 0.85rem; display: block; margin-top: 4px;">
-                    +{{ recentTransactions.length - 5 }} more transactions. Click view all to check full history
+                    +{{ recentTransactions.length - 5 }} more transactions. Click to view all history
                   </span>
                 </div>
               </div>
 
               <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0">
-                <i class="fas fa-receipt"></i>
-                <p>No transactions yet</p>
+                <i class="fas fa-receipt"></i><p>No transactions yet</p>
               </div>
             </div>
           </div>
+        </div>
 
         <div class="card">
           <div class="card-header"><h3><i class="fas fa-bolt"></i> Quick Transfer</h3></div>

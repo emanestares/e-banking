@@ -332,9 +332,19 @@ body {
 
 /* ── ACCOUNT CARD (DASHBOARD MINI) ────────────────────────── */
 .account-card {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: .9rem 1.1rem; border: 1px solid var(--gray-100); border-radius: 12px;
-  margin-bottom: .65rem; transition: all .15s; background: var(--gray-50);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Balanced padding */
+  padding: 1.15rem 1.1rem;
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  margin-bottom: .65rem;
+  transition: all .15s;
+  background: var(--gray-50);
+  /* Ensure a consistent height regardless of content */
+  min-height: 4.5rem;
+  box-sizing: border-box;
 }
 .account-card:hover { box-shadow: var(--shadow); background: var(--white); border-color: var(--gray-200); }
 .account-card-left { display: flex; align-items: center; gap: .85rem; }
@@ -426,8 +436,15 @@ body {
 
 /* ── TXN ROW ───────────────────────────────────────────────── */
 .txn-row {
-  display: flex; align-items: center; gap: .85rem;
-  padding: .9rem 0; border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  /* Matches account-card vertical padding + border compensation */
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid var(--gray-100);
+  /* Force exact height match */
+  min-height: 4.5rem;
+  box-sizing: border-box;
 }
 .txn-row:last-child { border-bottom: none; }
 
