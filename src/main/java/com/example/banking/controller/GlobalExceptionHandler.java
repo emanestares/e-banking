@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -65,5 +66,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiResponse<>(false, "An internal error occurred. Please try again.", null));
+    }
+
+    //For invalid amounts
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleInvalidJson(
+            HttpMessageNotReadableException ex) {
+
+        Map<String, String> errors = new HashMap<>();
+
+        if (ex.getMessage().contains("amount")) {
+            errors.put("amount", "Invalid amount format");
+        } else {
+            errors.put("request", "Malformed JSON request");
+        }
+
+        return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, "Validation failed", errors));
     }
 }
