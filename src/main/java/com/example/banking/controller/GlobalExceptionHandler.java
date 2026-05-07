@@ -74,14 +74,23 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException ex) {
 
         Map<String, String> errors = new HashMap<>();
+        String errorMessage = "Malformed JSON request";
 
-        if (ex.getMessage().contains("amount")) {
-            errors.put("amount", "Invalid amount format");
+        // Check if the cause is a formatting issue (like 5-5 for a number)
+        if (ex.getCause() instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException formatEx) {
+            // Get the field name that failed (e.g., "amount")
+            String fieldName = formatEx.getPath().get(0).getFieldName();
+            if ("amount".equals(fieldName)) {
+                errors.put(fieldName, "Amount must be a valid number (e.g., 100.50)");
+            } else {
+                errors.put(fieldName, "Invalid format for this field");
+            }
+            errorMessage = "Invalid input format";
         } else {
-            errors.put("request", "Malformed JSON request");
+            errors.put("request", "The request body is unreadable or empty");
         }
 
         return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, "Validation failed", errors));
+                .body(new ApiResponse<>(false, errorMessage, errors));
     }
 }

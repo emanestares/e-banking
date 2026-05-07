@@ -484,13 +484,20 @@
                 <div class="form-section-title"><i class="fas fa-paper-plane"></i> Sender Information</div>
                 <div class="form-group">
                   <label>From Account
-                    <span class="required-asterisk" style="color:red" ng-if="transferFieldErrors.senderAccountNumber">*</span></label>
+                    <span class="required-asterisk"
+                          style="color:red"
+                          ng-if="transferFieldErrors.senderAccountNumber">*</span>
+                  </label>
                   <select ng-model="transfer.senderAccountNumber" class="form-control" ng-change="getSenderBalance()">
                     <option value="" disabled>Select your account</option>
                     <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">
                       {{ acc.accountNumber }} - {{ acc.accountType }} ({{ acc.balance | currency:'₱' }})
                     </option>
                   </select>
+                  <small class="text-danger"
+                         ng-if="transferFieldErrors.senderAccountNumber">
+                    {{ transferFieldErrors.senderAccountNumber }}
+                  </small>
                 </div>
                 <div class="balance-preview" ng-if="senderBalance !== null">
                   Available Balance: <strong>{{ senderBalance | currency:'₱' }}</strong>
