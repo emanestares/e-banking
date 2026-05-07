@@ -25,6 +25,7 @@ public class SignupRequest {
 
 
     @NotNull(message = "Initial deposit is required and not negative")
+    @DecimalMax(value = "10000000", message = "Initial deposit must not exceed 10 million")
     @DecimalMin(value = "0.01", message = "Initial deposit must be greater than 0")
     private BigDecimal initialDeposit;
 }
