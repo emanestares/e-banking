@@ -214,7 +214,10 @@
           <div class="card">
             <div class="card-header">
               <h3><i class="fas fa-credit-card"></i> My Accounts</h3>
-              <button class="btn btn-sm btn-outline" ng-click="navigate('accounts')">View All</button>
+              <div style="display:flex;gap:.5rem;align-items:center;">
+                <button class="btn-refresh" ng-class="{spinning: loadingAccounts}" ng-click="refreshDashboard()" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+                <button class="btn btn-sm btn-outline" ng-click="navigate('accounts')">View All</button>
+              </div>
             </div>
             <div class="card-body">
               <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
@@ -238,7 +241,10 @@
           <div class="card">
             <div class="card-header">
               <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
-              <button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button>
+              <div style="display:flex;gap:.5rem;align-items:center;">
+                <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="refreshDashboard()" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+                <button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button>
+              </div>
             </div>
             <div class="card-body">
               <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
@@ -248,11 +254,18 @@
                 </div>
                 <div class="txn-info">
                   <div class="txn-ref">{{ t.referenceNumber }}</div>
-                  <div class="txn-desc">{{ t.description || t.transactionType }}</div>
-                  <div class="txn-date">{{ t.createdAt | date:'MMM d, h:mm a' }}</div>
+                  <div class="txn-meta">
+                    <span class="txn-acc-num">{{ t.direction === 'CREDIT' ? t.senderAccountNumber : t.receiverAccountNumber }}</span>
+                    <span class="txn-dot" ng-if="t.description">·</span>
+                    <span class="txn-desc-text" ng-if="t.description">{{ t.description }}</span>
+                  </div>
+                  <div class="txn-date">{{ t.createdAt | date:'MMM d, yyyy · h:mm a' }}</div>
                 </div>
-                <div class="txn-amount" ng-class="t.direction==='CREDIT'?'amount-credit':'amount-debit'">
-                  <span ng-if="t.direction==='DEBIT'">-</span>{{ t.amount | currency:'₱' }}
+                <div class="txn-right">
+                  <div class="txn-amount" ng-class="t.direction==='CREDIT'?'amount-credit':'amount-debit'">
+                    <span ng-if="t.direction==='DEBIT'">−</span>{{ t.amount | currency:'₱' }}
+                  </div>
+                  <div class="txn-type-badge">{{ t.transactionType }}</div>
                 </div>
               </div>
               <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0"><i class="fas fa-receipt"></i><p>No transactions yet</p></div>
@@ -285,9 +298,27 @@
                   <label ng-class="{'text-danger': quickTransferFieldErrors.receiverAccountNumber}">
                     To Account Number <span style="color:red" ng-if="quickTransferFieldErrors.receiverAccountNumber">*</span>
                   </label>
-                  <input type="text" ng-model="quickTransfer.receiverAccountNumber"
-                         ng-change="clearFieldError('receiverAccountNumber', 'quickTransferFieldErrors')"
-                         class="form-control" placeholder="e.g. ACC-00002">
+                  <div class="autocomplete-wrap">
+                    <input type="text" ng-model="quickTransfer.receiverAccountNumber"
+                           ng-change="clearFieldError('receiverAccountNumber', 'quickTransferFieldErrors'); onRecipientChange('quick')"
+                           ng-focus="quickRecipientPicked=false; showQuickSuggestions=true"
+                           ng-blur="hideQuickSuggestions()"
+                           class="form-control" placeholder="e.g. ACC-00002"
+                           autocomplete="off">
+                    <div class="autocomplete-dropdown"
+                         ng-if="showQuickSuggestions && !quickRecipientPicked && filteredRecipients(quickTransfer.receiverAccountNumber).length > 0">
+                      <div class="autocomplete-item"
+                           ng-repeat="r in filteredRecipients(quickTransfer.receiverAccountNumber)"
+                           ng-mousedown="selectRecipient('quick', r)">
+                        <div class="autocomplete-avatar">{{ r.name | limitTo:1 }}</div>
+                        <div>
+                          <div class="autocomplete-name">{{ r.name }}</div>
+                          <div class="autocomplete-acc">{{ r.accountNumber }}</div>
+                        </div>
+                        <div class="autocomplete-tag">Recent</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Amount -->
@@ -318,6 +349,9 @@
 
       <!-- ACCOUNTS PAGE (ATM CARDS) -->
       <div ng-if="currentPage==='accounts'">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+          <button class="btn-refresh" ng-class="{spinning: loadingAccounts}" ng-click="loadAccountsPublic()" title="Refresh accounts"><i class="fas fa-rotate-right"></i> Refresh</button>
+        </div>
         <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
         <div class="atm-cards-grid" ng-if="!loadingAccounts && accounts.length > 0">
           <div ng-repeat="acc in accounts" class="card" style="overflow:visible; background:transparent; border:none; box-shadow:none; margin-bottom:0;">
@@ -414,13 +448,30 @@
                     To Account Number
                     <span class="required-asterisk" style="color:red" ng-if="transferFieldErrors.receiverAccountNumber">*</span>
                   </label>
-                  <input type="text"
-                         ng-model="transfer.receiverAccountNumber"
-                         class="form-control"
-                         ng-class="{'is-invalid': transferFieldErrors.receiverAccountNumber}"
-                         placeholder="e.g. ACC-00002">
-
-                  <!-- This shows the specific message from your TransferRequest.java -->
+                  <div class="autocomplete-wrap">
+                    <input type="text"
+                           ng-model="transfer.receiverAccountNumber"
+                           class="form-control"
+                           ng-class="{'is-invalid': transferFieldErrors.receiverAccountNumber}"
+                           placeholder="e.g. ACC-00002"
+                           ng-focus="transferRecipientPicked=false; showTransferSuggestions=true"
+                           ng-change="onRecipientChange('transfer')"
+                           ng-blur="hideTransferSuggestions()"
+                           autocomplete="off">
+                    <div class="autocomplete-dropdown"
+                         ng-if="showTransferSuggestions && !transferRecipientPicked && filteredRecipients(transfer.receiverAccountNumber).length > 0">
+                      <div class="autocomplete-item"
+                           ng-repeat="r in filteredRecipients(transfer.receiverAccountNumber)"
+                           ng-mousedown="selectRecipient('transfer', r)">
+                        <div class="autocomplete-avatar">{{ r.name | limitTo:1 }}</div>
+                        <div>
+                          <div class="autocomplete-name">{{ r.name }}</div>
+                          <div class="autocomplete-acc">{{ r.accountNumber }}</div>
+                        </div>
+                        <div class="autocomplete-tag">Recent</div>
+                      </div>
+                    </div>
+                  </div>
                   <small class="text-danger" ng-if="transferFieldErrors.receiverAccountNumber">
                     {{transferFieldErrors.receiverAccountNumber}}
                   </small>
@@ -503,7 +554,10 @@
         <div class="card">
           <div class="card-header">
             <h3><i class="fas fa-clock-rotate-left"></i> Transaction History</h3>
-            <input type="text" ng-model="txnSearch" class="search-input" placeholder="&#xf002;  Search...">
+            <div style="display:flex;gap:.5rem;align-items:center;">
+              <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="loadTransactionsPublic()" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+              <input type="text" ng-model="txnSearch" class="search-input" placeholder="&#xf002;  Search...">
+            </div>
           </div>
           <div class="card-body">
             <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
