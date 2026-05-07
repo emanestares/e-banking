@@ -220,8 +220,11 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
-              <div class="account-card" ng-repeat="acc in accounts">
+              <div class="loading-box" ng-if="loadingAccounts">
+                <i class="fas fa-spinner fa-spin"></i> Loading accounts...
+              </div>
+
+              <div class="account-card" ng-repeat="acc in accounts | limitTo: 5">
                 <div class="account-card-left">
                   <div class="account-icon"><i class="fas fa-piggy-bank"></i></div>
                   <div>
@@ -234,7 +237,20 @@
                   <div class="balance-amount">{{ acc.balance | currency:'₱' }}</div>
                 </div>
               </div>
-              <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0"><i class="fas fa-wallet"></i><p>No accounts found</p></div>
+
+              <div class="account-card ellipsis-row"
+                   ng-if="accounts.length > 5"
+                   ng-click="currentPage='accounts'"
+                   style="cursor: pointer; justify-content: center; background: var(--gray-50); border: 1px dashed var(--gray-300);">
+                <div style="text-align: center; color: var(--gray-500); padding: 0.5rem;">
+                  <i class="fas fa-ellipsis-h"></i>
+                  <span style="font-size: 0.85rem; display: block;">+{{ accounts.length - 5 }} more accounts. Click view all for the other accounts</span>
+                </div>
+              </div>
+
+              <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0">
+                <i class="fas fa-wallet"></i><p>No accounts found</p>
+              </div>
             </div>
           </div>
 
@@ -242,12 +258,17 @@
             <div class="card-header">
               <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
               <div style="display:flex;gap:.5rem;align-items:center;">
-                <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="refreshDashboard()" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+                <button class="btn-refresh" ng-class="{spinning: loadingTxns}" ng-click="refreshDashboard()" title="Refresh">
+                  <i class="fas fa-rotate-right"></i>
+                </button>
                 <button class="btn btn-sm btn-outline" ng-click="navigate('transactions')">View All</button>
               </div>
             </div>
             <div class="card-body">
-              <div class="loading-box" ng-if="loadingTxns"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+              <div class="loading-box" ng-if="loadingTxns">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+              </div>
+
               <div class="txn-row" ng-repeat="t in recentTransactions | limitTo:5">
                 <div class="txn-icon" ng-class="t.direction==='CREDIT'?'txn-credit':'txn-debit'">
                   <i class="fas" ng-class="t.direction==='CREDIT'?'fa-arrow-down':'fa-arrow-up'"></i>
@@ -268,10 +289,25 @@
                   <div class="txn-type-badge">{{ t.transactionType }}</div>
                 </div>
               </div>
-              <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0"><i class="fas fa-receipt"></i><p>No transactions yet</p></div>
+
+              <div class="txn-row ellipsis-row"
+                   ng-if="recentTransactions.length > 5"
+                   ng-click="navigate('transactions')"
+                   style="cursor: pointer; justify-content: center; background: #f9fafb; border: 1px dashed #e5e7eb; margin-top: 10px; border-radius: 8px;">
+                <div style="text-align: center; color: #6b7280; padding: 0.8rem;">
+                  <i class="fas fa-ellipsis-h"></i>
+                  <span style="font-size: 0.85rem; display: block; margin-top: 4px;">
+                    +{{ recentTransactions.length - 5 }} more transactions. Click view all to check full history
+                  </span>
+                </div>
+              </div>
+
+              <div class="empty-state" ng-if="!loadingTxns && recentTransactions.length===0">
+                <i class="fas fa-receipt"></i>
+                <p>No transactions yet</p>
+              </div>
             </div>
           </div>
-        </div>
 
         <div class="card">
           <div class="card-header"><h3><i class="fas fa-bolt"></i> Quick Transfer</h3></div>
@@ -451,7 +487,8 @@
               <div class="form-section">
                 <div class="form-section-title"><i class="fas fa-paper-plane"></i> Sender Information</div>
                 <div class="form-group">
-                  <label>From Account</label>
+                  <label>From Account
+                    <span class="required-asterisk" style="color:red" ng-if="transferFieldErrors.senderAccountNumber">*</span></label>
                   <select ng-model="transfer.senderAccountNumber" class="form-control" ng-change="getSenderBalance()">
                     <option value="" disabled>Select your account</option>
                     <option ng-repeat="acc in accounts" value="{{ acc.accountNumber }}">

@@ -761,3 +761,20 @@ textarea.form-control { resize: vertical; }
    opacity:.5;
    cursor:not-allowed;
  }
+
+ /*ellipsis */
+
+ .ellipsis-row {
+   transition: all 0.2s ease;
+   margin-top: 10px;
+ }
+
+ .ellipsis-row:hover {
+   background-color: var(--gray-100) !important;
+   border-color: var(--primary-color) !important;
+ }
+
+ .ellipsis-row i {
+   font-size: 1.2rem;
+   margin-bottom: 4px;
+ }
