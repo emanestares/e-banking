@@ -911,7 +911,10 @@
                     </small>
                   </div>
                   <div class="form-group">
-                    <label ng-class="{'label-error': enrollFieldErrors.purpose}">Purpose / Notes</label>
+                    <label ng-class="{'label-error': enrollFieldErrors.purpose}">Purpose / Notes
+                      <span class="required-asterisk" style="color:red" ng-if="enrollFieldErrors.purpose">*</span>
+                    </label>
+
                     <textarea class="form-control"
                               ng-class="{'is-invalid': enrollFieldErrors.purpose}"
                               ng-model="enrollData.purpose"
