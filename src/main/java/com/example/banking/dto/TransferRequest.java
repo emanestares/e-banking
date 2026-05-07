@@ -14,9 +14,13 @@ public class TransferRequest {
     @NotBlank(message = "Receiver account number is required")
     private String receiverAccountNumber;
 
-    @NotNull(message = "Amount is required and not negative")
+    @NotNull(message = "Amount is required")
     @DecimalMax(value = "10000000", message = "Amount must not exceed 10 million")
     @DecimalMin(value = "0.01", message = "Amount must be at least 0.01")
+    @Pattern(
+            regexp = "^\\d{1,15}(\\.\\d{1,2})?$",
+            message = "Invalid amount format"
+    )
     @Digits(integer = 15, fraction = 2, message = "Invalid amount format")
     private BigDecimal amount;
 
