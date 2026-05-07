@@ -511,7 +511,7 @@
               <table class="data-table">
                 <thead><tr><th>Reference</th><th>Type</th><th>From</th><th>To</th><th>Amount</th><th>Direction</th><th>Status</th><th>Date</th></tr></thead>
                 <tbody>
-                <tr ng-repeat="t in transactions | filter:txnSearch">
+                <tr ng-repeat="t in paginate((transactions | filter:txnSearch), txnCurrentPage, txnPageSize)">
                   <td><code>{{ t.referenceNumber }}</code></td>
                   <td>{{ t.transactionType }}</td>
                   <td><code class="acct-code">{{ t.senderAccountNumber||'—' }}</code></td>
@@ -524,6 +524,40 @@
                 <tr ng-if="transactions.length===0"><td colspan="8" class="text-center empty-row">No transactions found</td></tr>
                 </tbody>
               </table>
+              <div class="pagination-wrapper"
+                   ng-if="(transactions | filter:txnSearch).length > txnPageSize">
+
+                <ul class="pagination">
+
+                  <!-- PREV -->
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="txnCurrentPage === 1"
+                            ng-click="changePage('txn', txnCurrentPage - 1)">
+                      ‹ Prev
+                    </button>
+                  </li>
+
+                  <!-- PAGE NUMBERS -->
+                  <li ng-repeat="page in getPageNumbers((transactions | filter:txnSearch).length, txnPageSize)">
+                    <button class="page-btn"
+                            ng-class="{active: txnCurrentPage === page}"
+                            ng-click="changePage('txn', page)">
+                      {{ page }}
+                    </button>
+                  </li>
+
+                  <!-- NEXT -->
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="txnCurrentPage >= getPageNumbers((transactions | filter:txnSearch).length, txnPageSize).length"
+                            ng-click="changePage('txn', txnCurrentPage + 1)">
+                      Next ›
+                    </button>
+                  </li>
+
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -542,7 +576,7 @@
             <div class="table-responsive">
               <table class="data-table"><thead><tr><th>Account Number</th><th>Owner</th><th>Username</th><th>Type</th><th>Balance</th><th>Status</th><th>Opened</th></tr></thead>
                 <tbody>
-                <tr ng-repeat="a in adminAccounts | filter:adminAccSearch">
+                <tr ng-repeat="a in paginate((adminAccounts | filter:adminAccSearch), adminAccCurrentPage, adminAccPageSize)">
                   <td><code>{{ a.accountNumber }}</code></td><td>{{ a.ownerFullName }}</td><td>{{ a.ownerUsername }}</td>
                   <td>{{ a.accountType }}</td><td><strong>{{ a.balance | currency:'₱' }}</strong></td>
                   <td><span class="badge" ng-class="a.isActive?'badge-active':'badge-inactive'">{{ a.isActive?'Active':'Inactive' }}</span></td>
@@ -551,6 +585,37 @@
                 <tr ng-if="adminAccounts.length===0"><td colspan="7" class="empty-row text-center">No accounts found</td></tr>
                 </tbody>
               </table>
+              <div class="pagination-wrapper"
+                   ng-if="(adminAccounts | filter:adminAccSearch).length > adminAccPageSize">
+
+                <ul class="pagination">
+
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="adminAccCurrentPage === 1"
+                            ng-click="changePage('adminAcc', adminAccCurrentPage - 1)">
+                      ‹ Prev
+                    </button>
+                  </li>
+
+                  <li ng-repeat="page in getPageNumbers((adminAccounts | filter:adminAccSearch).length, adminAccPageSize)">
+                    <button class="page-btn"
+                            ng-class="{active: adminAccCurrentPage === page}"
+                            ng-click="changePage('adminAcc', page)">
+                      {{ page }}
+                    </button>
+                  </li>
+
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="adminAccCurrentPage >= getPageNumbers((adminAccounts | filter:adminAccSearch).length, adminAccPageSize).length"
+                            ng-click="changePage('adminAcc', adminAccCurrentPage + 1)">
+                      Next ›
+                    </button>
+                  </li>
+
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -561,7 +626,7 @@
             <div class="table-responsive">
               <table class="data-table"><thead><tr><th>Reference</th><th>From</th><th>To</th><th>Amount</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
                 <tbody>
-                <tr ng-repeat="t in adminTransactions | filter:adminTxnSearch">
+                <tr ng-repeat="t in paginate((adminTransactions | filter:adminTxnSearch), adminTxnCurrentPage, adminTxnPageSize)">
                   <td><code>{{ t.referenceNumber }}</code></td>
                   <td><code class="acct-code">{{ t.senderAccountNumber||'—' }}</code></td>
                   <td><code class="acct-code">{{ t.receiverAccountNumber||'—' }}</code></td>
@@ -572,6 +637,37 @@
                 <tr ng-if="adminTransactions.length===0"><td colspan="7" class="empty-row text-center">No transactions found</td></tr>
                 </tbody>
               </table>
+              <div class="pagination-wrapper"
+                   ng-if="(adminTransactions | filter:adminTxnSearch).length > adminTxnPageSize">
+
+                <ul class="pagination">
+
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="adminTxnCurrentPage === 1"
+                            ng-click="changePage('adminTxn', adminTxnCurrentPage - 1)">
+                      ‹ Prev
+                    </button>
+                  </li>
+
+                  <li ng-repeat="page in getPageNumbers((adminTransactions | filter:adminTxnSearch).length, adminTxnPageSize)">
+                    <button class="page-btn"
+                            ng-class="{active: adminTxnCurrentPage === page}"
+                            ng-click="changePage('adminTxn', page)">
+                      {{ page }}
+                    </button>
+                  </li>
+
+                  <li>
+                    <button class="page-btn"
+                            ng-disabled="adminTxnCurrentPage >= getPageNumbers((adminTransactions | filter:adminTxnSearch).length, adminTxnPageSize).length"
+                            ng-click="changePage('adminTxn', adminTxnCurrentPage + 1)">
+                      Next ›
+                    </button>
+                  </li>
+
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -705,7 +801,6 @@
     </div>
   </div>
 </div>
-
 <script src="app/app.js"></script>
 </body>
 </html>

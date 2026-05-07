@@ -638,3 +638,50 @@ textarea.form-control { resize: vertical; }
    font-size: 0.75rem;
    font-weight: 500;
  }
+
+
+ /* ───────────────── PAGINATION ───────────────── */
+
+ .pagination-wrapper{
+   margin-top: 1.5rem;
+   display:flex;
+   justify-content:center;
+ }
+
+ .pagination{
+   display:flex;
+   align-items:center;
+   gap:.5rem;
+   list-style:none;
+   padding:0;
+   margin:0;
+ }
+
+ .page-btn{
+   border:none;
+   background:white;
+   border:1px solid var(--gray-200);
+   color:var(--gray-700);
+   padding:.55rem .9rem;
+   border-radius:10px;
+   cursor:pointer;
+   font-weight:600;
+   transition:.2s ease;
+   min-width:42px;
+ }
+
+ .page-btn:hover:not(:disabled){
+   background:var(--primary-50);
+   border-color:var(--primary-300);
+ }
+
+ .page-btn.active{
+   background:var(--primary);
+   color:gold;
+   border-color:var(--primary);
+ }
+
+ .page-btn:disabled{
+   opacity:.5;
+   cursor:not-allowed;
+ }
