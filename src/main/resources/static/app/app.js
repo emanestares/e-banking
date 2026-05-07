@@ -2,6 +2,14 @@ angular.module('bankingApp', [])
 
 .controller('AppController', function($scope, $http, $interval, $filter) {
 
+  //page state
+
+
+  $scope.txnCurrentPage = 1;
+  $scope.adminAccCurrentPage = 1;
+  $scope.adminTxnCurrentPage = 1;
+
+
   // ── State ──────────────────────────────────────────────────
   $scope.isLoggedIn       = false;
   $scope.loading          = false;
@@ -63,6 +71,7 @@ angular.module('bankingApp', [])
   $scope.filteredTransactions = [];
   $scope.filteredAdminAccounts = [];
   $scope.filteredAdminTransactions = [];
+
 
   // ── Helpers ────────────────────────────────────────────────
   var API = '/api';
@@ -197,6 +206,7 @@ angular.module('bankingApp', [])
     if (page === 'accounts' || page === 'transfer' || page === 'enroll') { loadAccounts(); }
     if (page === 'transactions') { loadTransactions(); }
     if (page === 'admin') { $scope.adminTab = 'accounts'; $scope.loadAdminAccounts(); }
+
   };
 
   $scope.toggleSidebar = function () { $scope.sidebarCollapsed = !$scope.sidebarCollapsed; };
@@ -221,32 +231,42 @@ angular.module('bankingApp', [])
     $scope.loadingTxns = true;
     $http.get(API + '/transactions/my', { headers: authHeaders() })
       .then(function (res) {
-        $scope.transactions = res.data.data;
-        $scope.recentTransactions = res.data.data;
-        $scope.totalCredits = $scope.transactions
+        // 1. Assign data once
+        var data = res.data.data || [];
+              $scope.transactions = data;
+              $scope.recentTransactions = data;
+
+        // 2. Calculate totals using the 'data' variable
+        $scope.totalCredits = data
           .filter(function (t) { return t.direction === 'CREDIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
-        $scope.totalDebits = $scope.transactions
+
+        $scope.totalDebits = data
           .filter(function (t) { return t.direction === 'DEBIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
 
-        // Build past recipients list from DEBIT transactions (people we sent to)
+        // 3. Update the filter for the table
+        $scope.updateTxnFilter();
+
+        // 4. Build recipients list
         var seen = {};
         var myAccountNumbers = ($scope.accounts || []).map(function(a){ return a.accountNumber; });
         $scope.pastRecipients = [];
-        $scope.transactions.forEach(function (t) {
+        data.forEach(function (t) {
           if (t.direction === 'DEBIT' && t.receiverAccountNumber &&
               !seen[t.receiverAccountNumber] &&
               myAccountNumbers.indexOf(t.receiverAccountNumber) === -1) {
             seen[t.receiverAccountNumber] = true;
             $scope.pastRecipients.push({
               accountNumber: t.receiverAccountNumber,
-              name        : t.receiverName || t.receiverAccountNumber
+              name: t.receiverName || t.receiverAccountNumber
             });
           }
         });
       })
-      .finally(function () { $scope.loadingTxns = false; });
+      .finally(function () {
+        $scope.loadingTxns = false;
+      });
   }
 
   // ── Autocomplete helpers ────────────────────────────────────
@@ -388,14 +408,18 @@ angular.module('bankingApp', [])
   $scope.resetEnroll = function () { $scope.enrollData = { accountType: 'SAVINGS' }; $scope.enrollError = $scope.enrollSuccess = null; };
 
   // ── Pagination & Search Logic ──────────────────────────────
-    $scope.txnPageSize = 10;
-    $scope.adminAccPageSize = 10;
-    $scope.adminTxnPageSize = 10;
+    $scope.txnPageSize = 5;
+    $scope.adminAccPageSize = 5;
+    $scope.adminTxnPageSize = 5;
     $scope.Math = window.Math; // Helper for HTML templates
 
     $scope.getPageNumbers = function(totalItems, pageSize) {
-      var totalPages = Math.ceil(totalItems / pageSize) || 0;
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+        var totalPages = Math.ceil(totalItems / pageSize) || 0;
+        var pages = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pages.push(i);
+        }
+        return pages;
     };
 
     $scope.paginate = function(data, currentPage, pageSize) {
@@ -415,61 +439,83 @@ angular.module('bankingApp', [])
       if (page >= 1 && page <= totalPages) $scope[m.current] = page;
     };
 
-    // SINGLE SOURCE OF TRUTH FOR FILTERS
-    // We use $filter('filter') because it provides the "perfect" search across all fields
-    $scope.updateTxnFilter = function () {
-      $scope.filteredTransactions = $filter('filter')($scope.transactions, $scope.txnSearch) || [];
-    };
+    // ── Search & Pagination Reset Logic ────────────────────────
 
-    $scope.updateAdminAccFilter = function () {
-      $scope.filteredAdminAccounts = $filter('filter')($scope.adminAccounts, $scope.adminAccSearch) || [];
-    };
+      // Replace the individual search variables with a search object
+      $scope.search = {
+          txn: '',
+          adminAcc: '',
+          adminTxn: ''
+      };
 
-    $scope.updateAdminTxnFilter = function () {
-      $scope.filteredAdminTransactions = $filter('filter')($scope.adminTransactions, $scope.adminTxnSearch) || [];
-    };
+      $scope.$watch('search.txn', function () {
+          $scope.updateTxnFilter();
+      });
 
-    // ── Watchers ───────────────────────────────────────────────
+      $scope.$watch('search.adminAcc', function () {
+          $scope.updateAdminAccFilter();
+      });
 
-    // These watchers ensure that every time you type, the search updates
-    // AND the view jumps back to Page 1 immediately.
-    $scope.$watch('txnSearch', function () {
-        $scope.txnCurrentPage = 1;
-        $scope.updateTxnFilter();
-    });
+      $scope.$watch('search.adminTxn', function () {
+          $scope.updateAdminTxnFilter();
+      });
 
-    $scope.$watch('adminAccSearch', function () {
-        $scope.adminAccCurrentPage = 1;
-        $scope.updateAdminAccFilter();
-    });
+      $scope.updateTxnFilter = function () {
+          $scope.txnCurrentPage = 1;
+          // Use the object property
+          var query = ($scope.search.txn || '').toLowerCase().trim();
+          var sourceData = $scope.transactions || [];
 
-    $scope.$watch('adminTxnSearch', function () {
-        $scope.adminTxnCurrentPage = 1;
-        $scope.updateAdminTxnFilter();
-    });
+          if (!query) {
+              $scope.filteredTransactions = sourceData;
+          } else {
+              $scope.filteredTransactions = sourceData.filter(function(t) {
+                  if (!t) return false;
+                  var ref = (t.referenceNumber || '').toLowerCase();
+                  var type = (t.transactionType || '').toLowerCase();
+                  var from = (t.senderAccountNumber || '').toLowerCase();
+                  var to = (t.receiverAccountNumber || '').toLowerCase();
+                  return ref.indexOf(query) !== -1 ||
+                         type.indexOf(query) !== -1 ||
+                         from.indexOf(query) !== -1 ||
+                         to.indexOf(query) !== -1;
+              });
+          }
+      };
 
-    //watch again
-    $scope.$watch('txnSearch', function(newVal, oldVal) {
-        if (newVal !== oldVal) {
-            $scope.txnCurrentPage = 1;
-        }
-    });
+      $scope.updateAdminAccFilter = function () {
+          $scope.adminAccCurrentPage = 1;
+          var query = ($scope.search.adminAcc || '').toLowerCase().trim();
+          var sourceData = $scope.adminAccounts || [];
 
-    $scope.$watch('txnSearch', function() {
-        $scope.txnCurrentPage = 1;
-    });
+          if (!query) {
+              $scope.filteredAdminAccounts = sourceData;
+          } else {
+              $scope.filteredAdminAccounts = sourceData.filter(function(a) {
+                  return (a.accountNumber || '').toLowerCase().includes(query) ||
+                         (a.ownerFullName || '').toLowerCase().includes(query) ||
+                         (a.ownerUsername || '').toLowerCase().includes(query);
+              });
+          }
+      };
 
-    $scope.$watch('adminAccSearch', function(newVal, oldVal) {
-        if (newVal !== oldVal) {
-            $scope.adminAccCurrentPage = 1;
-        }
-    });
+      $scope.updateAdminTxnFilter = function () {
+          $scope.adminTxnCurrentPage = 1;
+          var query = ($scope.search.adminTxn || '').toLowerCase().trim();
+          var sourceData = $scope.adminTransactions || [];
 
-    $scope.$watch('adminTxnSearch', function(newVal, oldVal) {
-        if (newVal !== oldVal) {
-            $scope.adminTxnCurrentPage = 1;
-        }
-    });
+          if (!query) {
+              $scope.filteredAdminTransactions = sourceData;
+          } else {
+              $scope.filteredAdminTransactions = sourceData.filter(function(t) {
+                  return (t.referenceNumber || '').toLowerCase().includes(query) ||
+                         (t.senderAccountNumber || '').toLowerCase().includes(query) ||
+                         (t.receiverAccountNumber || '').toLowerCase().includes(query) ||
+                         (t.transactionType || '').toLowerCase().includes(query);
+              });
+          }
+      };
+
 
     // Watch for session changes
     $scope.$watch('isLoggedIn', function (v) {
