@@ -5,6 +5,7 @@ import com.example.banking.dto.TransferRequest;
 import com.example.banking.dto.TransferResponse;
 import com.example.banking.model.Account;
 import com.example.banking.model.Transaction;
+import com.example.banking.model.User;
 import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.TransactionRepository;
 import com.example.banking.repository.UserRepository;
@@ -137,18 +138,29 @@ public class TransactionService {
     // -------------------------------------------------------
     @Transactional(readOnly = true)
     public List<TransactionResponse> getTransactionsByUsername(String username) {
-        userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        List<Account> accounts = accountRepository.findByUserId(
-                userRepository.findByUsername(username).get().getId());
-
+        List<Account> accounts = accountRepository.findActiveAccountsByUserId(user.getId());
         if (accounts.isEmpty()) return List.of();
 
-        return transactionRepository.findAllByAccountId(accounts.get(0).getId())
-                .stream()
-                .map(t -> mapToResponse(t, accounts.get(0).getId()))
-                .collect(Collectors.toList());
+        // Collect all account IDs for this user
+        java.util.Set<Long> accountIds = accounts.stream()
+                .map(Account::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        // Gather transactions from all accounts, deduplicate by id, sort by date descending
+        return accounts.stream()
+                .flatMap(acc -> transactionRepository.findAllByAccountId(acc.getId()).stream()
+                        .map(t -> mapToResponse(t, acc.getId())))
+                .collect(java.util.LinkedHashMap<Long, TransactionResponse>::new,
+                        (map, t) -> map.putIfAbsent(t.getId(), t),
+                        java.util.LinkedHashMap::putAll)
+                .values().stream()
+                .sorted(java.util.Comparator.comparing(
+                        TransactionResponse::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // -------------------------------------------------------
@@ -173,6 +185,10 @@ public class TransactionService {
                 txn.getSenderAccount() != null ? txn.getSenderAccount().getAccountNumber() : null);
         resp.setReceiverAccountNumber(
                 txn.getReceiverAccount() != null ? txn.getReceiverAccount().getAccountNumber() : null);
+        resp.setSenderName(
+                txn.getSenderAccount() != null ? txn.getSenderAccount().getUser().getFullName() : null);
+        resp.setReceiverName(
+                txn.getReceiverAccount() != null ? txn.getReceiverAccount().getUser().getFullName() : null);
 
         // Determine DEBIT/CREDIT direction from perspective account
         if (perspectiveAccountId != null) {

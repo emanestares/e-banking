@@ -16,5 +16,7 @@ public class TransactionResponse {
     private LocalDateTime createdAt;
     private String senderAccountNumber;
     private String receiverAccountNumber;
+    private String senderName;
+    private String receiverName;
     private String direction; // DEBIT or CREDIT relative to the requesting account
 }

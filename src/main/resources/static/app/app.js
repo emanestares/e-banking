@@ -212,18 +212,101 @@ angular.module('bankingApp', [])
       .finally(function () { $scope.loadingAccounts = false; });
   }
 
+  // Public wrappers so buttons can call them
+  $scope.loadAccountsPublic      = loadAccounts;
+  $scope.loadTransactionsPublic  = loadTransactions;
+  $scope.refreshDashboard        = function () { loadAccounts(); loadTransactions(); };
+
   function loadTransactions() {
     $scope.loadingTxns = true;
     $http.get(API + '/transactions/my', { headers: authHeaders() })
       .then(function (res) {
         $scope.transactions = res.data.data;
         $scope.recentTransactions = res.data.data;
-        $scope.updateTxnFilter();
-        $scope.totalCredits = $scope.transactions.filter(t => t.direction === 'CREDIT').reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-        $scope.totalDebits = $scope.transactions.filter(t => t.direction === 'DEBIT').reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+        $scope.totalCredits = $scope.transactions
+          .filter(function (t) { return t.direction === 'CREDIT'; })
+          .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
+        $scope.totalDebits = $scope.transactions
+          .filter(function (t) { return t.direction === 'DEBIT'; })
+          .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
+
+        // Build past recipients list from DEBIT transactions (people we sent to)
+        var seen = {};
+        var myAccountNumbers = ($scope.accounts || []).map(function(a){ return a.accountNumber; });
+        $scope.pastRecipients = [];
+        $scope.transactions.forEach(function (t) {
+          if (t.direction === 'DEBIT' && t.receiverAccountNumber &&
+              !seen[t.receiverAccountNumber] &&
+              myAccountNumbers.indexOf(t.receiverAccountNumber) === -1) {
+            seen[t.receiverAccountNumber] = true;
+            $scope.pastRecipients.push({
+              accountNumber: t.receiverAccountNumber,
+              name        : t.receiverName || t.receiverAccountNumber
+            });
+          }
+        });
       })
       .finally(function () { $scope.loadingTxns = false; });
   }
+
+  // ── Autocomplete helpers ────────────────────────────────────
+  $scope.pastRecipients       = [];
+  $scope.showTransferSuggestions = false;
+  $scope.showQuickSuggestions    = false;
+
+  $scope.filteredRecipients = function (query) {
+    if (!$scope.pastRecipients.length) return [];
+    if (!query) return $scope.pastRecipients.slice(0, 6);
+    var q = query.toLowerCase();
+    return $scope.pastRecipients.filter(function (r) {
+      return r.accountNumber.toLowerCase().indexOf(q) !== -1 ||
+             r.name.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 6);
+  };
+
+  $scope.selectRecipient = function (target, r) {
+    if (target === 'transfer') {
+      $scope.transfer.receiverAccountNumber = r.accountNumber;
+      $scope.showTransferSuggestions  = false;
+      $scope.transferRecipientPicked  = true;
+    } else {
+      $scope.quickTransfer.receiverAccountNumber = r.accountNumber;
+      $scope.showQuickSuggestions   = false;
+      $scope.quickRecipientPicked   = true;
+    }
+  };
+
+  // Hide dropdown when the typed value exactly matches a known account number
+  // or when the field is long enough to be a committed account number (no partial match left)
+  $scope.onRecipientChange = function (target) {
+    var val = target === 'transfer'
+      ? ($scope.transfer.receiverAccountNumber || '')
+      : ($scope.quickTransfer.receiverAccountNumber || '');
+
+    var exactMatch = $scope.pastRecipients.some(function (r) {
+      return r.accountNumber.toLowerCase() === val.toLowerCase();
+    });
+
+    // Also hide if val looks like a complete account number but not in our list
+    // (e.g. user typed it manually — 8+ chars with 'ACC-' prefix)
+    var looksComplete = /^ACC-\S{4,}$/i.test(val.trim());
+
+    if (exactMatch || looksComplete) {
+      if (target === 'transfer') $scope.showTransferSuggestions = false;
+      else                        $scope.showQuickSuggestions    = false;
+    } else {
+      if (target === 'transfer') $scope.showTransferSuggestions = true;
+      else                        $scope.showQuickSuggestions    = true;
+    }
+  };
+
+  $scope.hideTransferSuggestions = function () {
+    // Small delay so ng-mousedown on item fires first
+    setTimeout(function () { $scope.$apply(function () { $scope.showTransferSuggestions = false; }); }, 150);
+  };
+  $scope.hideQuickSuggestions = function () {
+    setTimeout(function () { $scope.$apply(function () { $scope.showQuickSuggestions = false; }); }, 150);
+  };
 
   // ── Transfers ──────────────────────────────────────────────
   $scope.getSenderBalance = function () {
