@@ -1,6 +1,9 @@
 package com.example.banking.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -16,10 +19,6 @@ public class EnrollRequest {
 
     @NotNull(message = "Initial deposit is required and not negative")
     @DecimalMax(value = "10000000", message = "Initial deposit must not exceed 10 million")
-    @Pattern(
-            regexp = "^\\d{1,15}(\\.\\d{1,2})?$",
-            message = "Invalid amount format"
-    )
     @DecimalMin(value = "0.00", message = "Deposit cannot be negative")
     private BigDecimal initialDeposit;
 }
