@@ -411,6 +411,9 @@ angular.module('bankingApp', [])
     $scope.txnPageSize = 5;
     $scope.adminAccPageSize = 5;
     $scope.adminTxnPageSize = 5;
+
+    $scope.accCurrentPage = 1;
+    $scope.accPageSize = 4; // 4 for atm card grid
     $scope.Math = window.Math; // Helper for HTML templates
 
     $scope.getPageNumbers = function(totalItems, pageSize) {
@@ -430,13 +433,21 @@ angular.module('bankingApp', [])
 
     $scope.changePage = function(type, page) {
       var mapping = {
-        'txn': { current: 'txnCurrentPage', filtered: 'filteredTransactions', size: 'txnPageSize' },
-        'adminAcc': { current: 'adminAccCurrentPage', filtered: 'filteredAdminAccounts', size: 'adminAccPageSize' },
-        'adminTxn': { current: 'adminTxnCurrentPage', filtered: 'filteredAdminTransactions', size: 'adminTxnPageSize' }
+        'txn':      { current: 'txnCurrentPage',      filtered: 'filteredTransactions',      size: 'txnPageSize' },
+        'adminAcc': { current: 'adminAccCurrentPage', filtered: 'filteredAdminAccounts',     size: 'adminAccPageSize' },
+        'adminTxn': { current: 'adminTxnCurrentPage', filtered: 'filteredAdminTransactions', size: 'adminTxnPageSize' },
+        'acc':      { current: 'accCurrentPage',      filtered: 'accounts',                  size: 'accPageSize' }
       };
+
       var m = mapping[type];
+      if (!m) return;
+
       var totalPages = Math.ceil(($scope[m.filtered] || []).length / $scope[m.size]);
-      if (page >= 1 && page <= totalPages) $scope[m.current] = page;
+
+      // Logic to update the page
+      if (page >= 1 && (totalPages === 0 || page <= totalPages)) {
+        $scope[m.current] = page;
+      }
     };
 
     // ── Search & Pagination Reset Logic ────────────────────────

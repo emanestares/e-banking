@@ -350,17 +350,22 @@
       <!-- ACCOUNTS PAGE (ATM CARDS) -->
       <div ng-if="currentPage==='accounts'">
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-          <button class="btn-refresh" ng-class="{spinning: loadingAccounts}" ng-click="loadAccountsPublic()" title="Refresh accounts"><i class="fas fa-rotate-right"></i> Refresh</button>
+          <button class="btn-refresh" ng-class="{spinning: loadingAccounts}" ng-click="loadAccountsPublic()" title="Refresh accounts">
+            <i class="fas fa-rotate-right"></i> Refresh
+          </button>
         </div>
-        <div class="loading-box" ng-if="loadingAccounts"><i class="fas fa-spinner fa-spin"></i> Loading accounts...</div>
+
+        <div class="loading-box" ng-if="loadingAccounts">
+          <i class="fas fa-spinner fa-spin"></i> Loading accounts...
+        </div>
+
         <div class="atm-cards-grid" ng-if="!loadingAccounts && accounts.length > 0">
-          <div ng-repeat="acc in accounts" class="card" style="overflow:visible; background:transparent; border:none; box-shadow:none; margin-bottom:0;">
+          <div ng-repeat="acc in paginate(accounts, accCurrentPage, accPageSize)" class="card" style="overflow:visible; background:transparent; border:none; box-shadow:none; margin-bottom:0;">
             <div class="atm-card-wrapper">
               <div class="atm-card" ng-class="'atm-bg-' + (($index % 3) + 1)">
                 <div class="atm-card-pattern"></div>
                 <div class="atm-shimmer"></div>
                 <div class="atm-card-inner">
-                  <!-- Top Row -->
                   <div class="atm-top">
                     <div>
                       <div class="atm-bank-name">E-Banking</div>
@@ -373,12 +378,10 @@
                       </div>
                     </div>
                   </div>
-                  <!-- Mid Row - Balance -->
                   <div class="atm-mid">
                     <div class="atm-balance-label">Available Balance</div>
                     <div class="atm-balance">{{ acc.balance | currency:'₱' }}</div>
                   </div>
-                  <!-- Bottom Row -->
                   <div class="atm-bottom">
                     <div>
                       <div class="atm-number">{{ acc.accountNumber }}</div>
@@ -392,7 +395,6 @@
                 </div>
               </div>
             </div>
-            <!-- Meta Info Below Card -->
             <div class="atm-meta" style="border-radius: 0 0 16px 16px; background: white; border: 1px solid var(--gray-100); border-top: none; box-shadow: var(--shadow);">
               <div class="atm-meta-item">
                 <div class="atm-meta-label">Account Number</div>
@@ -409,6 +411,30 @@
             </div>
           </div>
         </div>
+
+
+        <div class="pagination-wrapper" ng-if="accounts.length > accPageSize" style="margin-top: 2rem;">
+            <ul class="pagination">
+              <li>
+                <button class="page-btn"
+                        ng-disabled="accCurrentPage === 1"
+                        ng-click="changePage('acc', accCurrentPage - 1)">‹ Prev</button>
+              </li>
+
+              <li ng-repeat="page in getPageNumbers(accounts.length, accPageSize)">
+                <button class="page-btn"
+                        ng-class="{active: accCurrentPage === page}"
+                        ng-click="changePage('acc', page)">{{ page }}</button>
+              </li>
+
+              <li>
+                <button class="page-btn"
+                        ng-disabled="accCurrentPage >= (accounts.length / accPageSize)"
+                        ng-click="changePage('acc', accCurrentPage + 1)">Next ›</button>
+              </li>
+            </ul>
+          </div>
+
         <div class="empty-state" ng-if="!loadingAccounts && accounts.length===0">
           <i class="fas fa-credit-card"></i><p>No accounts found</p>
         </div>
