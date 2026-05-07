@@ -101,7 +101,7 @@ trim() {
   # MWRAPPER-139:
   #   Trims trailing and leading whitespace, carriage returns, tabs, and linefeeds.
   #   Needed for removing poorly interpreted newline sequences when running in more
-  #   exotic environments such as mingw bash on Windows.
+  #   exotic environments such ssss mingw bash on Windows.
   printf "%s" "${1}" | tr -d '[:space:]'
 }
 

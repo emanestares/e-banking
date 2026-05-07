@@ -1,6 +1,7 @@
 package com.example.banking.service;
 
 import com.example.banking.dto.AccountResponse;
+import com.example.banking.dto.EnrollRequest;
 import com.example.banking.model.Account;
 import com.example.banking.model.User;
 import com.example.banking.repository.AccountRepository;
@@ -10,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,41 @@ public class AccountService {
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AccountResponse enrollAccount(String username, EnrollRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        String type = (request.getAccountType() != null &&
+                       request.getAccountType().equalsIgnoreCase("CHECKING"))
+                ? "CHECKING" : "SAVINGS";
+
+        BigDecimal deposit = (request.getInitialDeposit() != null &&
+                              request.getInitialDeposit().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getInitialDeposit()
+                : BigDecimal.ZERO;
+
+        Account account = Account.builder()
+                .accountNumber(generateAccountNumber())
+                .user(user)
+                .balance(deposit)
+                .accountType(type)
+                .isActive(true)
+                .build();
+
+        accountRepository.save(account);
+        return mapToResponse(account);
+    }
+
+    private String generateAccountNumber() {
+        String number;
+        do {
+            int rand = (int)(Math.random() * 90000) + 10000;
+            number = "ACC-" + rand;
+        } while (accountRepository.existsByAccountNumber(number));
+        return number;
     }
 
     private AccountResponse mapToResponse(Account account) {
