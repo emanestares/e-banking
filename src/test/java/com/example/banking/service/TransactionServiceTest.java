@@ -1,5 +1,6 @@
 package com.example.banking.service;
 
+import com.example.banking.dto.TransactionResponse;
 import com.example.banking.dto.TransferRequest;
 import com.example.banking.dto.TransferResponse;
 import com.example.banking.model.Account;
@@ -9,45 +10,67 @@ import com.example.banking.model.User;
 import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.TransactionRepository;
 import com.example.banking.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
     @InjectMocks
     private TransactionService transactionService;
 
-    @Mock private TransactionRepository transactionRepository;
-    @Mock private AccountRepository accountRepository;
-    @Mock private UserRepository userRepository;
+    @Mock
+    private TransactionRepository transactionRepository;
+
+    @Mock
+    private AccountRepository accountRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     private User user;
     private User admin;
+
     private Account sender;
     private Account receiver;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
 
         user = User.builder()
                 .id(1L)
                 .username("john")
+                .fullName("John Doe")
                 .roles(Set.of())
                 .build();
 
-        Role adminRole = Role.builder().name("ROLE_ADMIN").build();
+        Role adminRole = Role.builder()
+                .name("ROLE_ADMIN")
+                .build();
+
         admin = User.builder()
                 .id(2L)
                 .username("admin")
+                .fullName("Admin User")
                 .roles(Set.of(adminRole))
                 .build();
 
@@ -55,6 +78,7 @@ class TransactionServiceTest {
                 .id(10L)
                 .accountNumber("ACC1")
                 .balance(BigDecimal.valueOf(1000))
+                .isActive(true)
                 .user(user)
                 .build();
 
@@ -62,14 +86,18 @@ class TransactionServiceTest {
                 .id(20L)
                 .accountNumber("ACC2")
                 .balance(BigDecimal.valueOf(500))
+                .isActive(true)
                 .user(admin)
                 .build();
     }
 
-    // ---------------- TRANSFER SUCCESS ----------------
+    // =====================================================
+    // TRANSFER SUCCESS
+    // =====================================================
 
     @Test
     void shouldTransferSuccessfully() {
+
         TransferRequest request = new TransferRequest();
         request.setSenderAccountNumber("ACC1");
         request.setReceiverAccountNumber("ACC2");
@@ -82,44 +110,120 @@ class TransactionServiceTest {
         when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
                 .thenReturn(Optional.of(receiver));
 
-        when(userRepository.findByUsername("john"))
-                .thenReturn(Optional.of(user));
-
         when(transactionRepository.save(any(Transaction.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         TransferResponse response =
                 transactionService.transfer(request, "john");
 
         assertNotNull(response);
+
         assertEquals(BigDecimal.valueOf(200), response.getAmount());
+
         assertEquals("ACC1", response.getSenderAccountNumber());
         assertEquals("ACC2", response.getReceiverAccountNumber());
 
         assertEquals(BigDecimal.valueOf(800), sender.getBalance());
         assertEquals(BigDecimal.valueOf(700), receiver.getBalance());
 
-        verify(accountRepository, times(2)).save(any(Account.class));
-        verify(transactionRepository).save(any(Transaction.class));
+        assertEquals("COMPLETED", response.getStatus());
+
+        assertTrue(response.getReferenceNumber().startsWith("TXN-"));
+
+        verify(accountRepository, times(2))
+                .save(any(Account.class));
+
+        verify(transactionRepository)
+                .save(any(Transaction.class));
     }
 
-    // ---------------- SAME ACCOUNT ----------------
+    @Test
+    void shouldAllowAdminTransfer() {
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.of(receiver));
+
+        when(userRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(admin));
+
+        when(transactionRepository.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransferResponse response =
+                transactionService.transfer(request, "admin");
+
+        assertNotNull(response);
+        assertEquals(BigDecimal.TEN, response.getAmount());
+    }
+
+    // =====================================================
+    // TRANSFER VALIDATION
+    // =====================================================
 
     @Test
     void shouldThrowException_whenSameAccountTransfer() {
+
         TransferRequest request = new TransferRequest();
         request.setSenderAccountNumber("ACC1");
         request.setReceiverAccountNumber("ACC1");
         request.setAmount(BigDecimal.TEN);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> transactionService.transfer(request, "john"));
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> transactionService.transfer(request, "john")
+        );
+
+        assertTrue(ex.getMessage().contains("same account"));
     }
 
-    // ---------------- INSUFFICIENT FUNDS ----------------
+    @Test
+    void shouldThrowException_whenSenderNotFound() {
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                NoSuchElementException.class,
+                () -> transactionService.transfer(request, "john")
+        );
+    }
+
+    @Test
+    void shouldThrowException_whenReceiverNotFound() {
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                NoSuchElementException.class,
+                () -> transactionService.transfer(request, "john")
+        );
+    }
 
     @Test
     void shouldThrowException_whenInsufficientFunds() {
+
         TransferRequest request = new TransferRequest();
         request.setSenderAccountNumber("ACC1");
         request.setReceiverAccountNumber("ACC2");
@@ -131,17 +235,17 @@ class TransactionServiceTest {
         when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
                 .thenReturn(Optional.of(receiver));
 
-        when(userRepository.findByUsername("john"))
-                .thenReturn(Optional.of(user));
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> transactionService.transfer(request, "john")
+        );
 
-        assertThrows(IllegalStateException.class,
-                () -> transactionService.transfer(request, "john"));
+        assertTrue(ex.getMessage().contains("Insufficient funds"));
     }
-
-    // ---------------- ACCESS DENIED ----------------
 
     @Test
     void shouldThrowAccessDenied_whenNotOwnerOrAdmin() {
+
         TransferRequest request = new TransferRequest();
         request.setSenderAccountNumber("ACC1");
         request.setReceiverAccountNumber("ACC2");
@@ -161,19 +265,18 @@ class TransactionServiceTest {
         when(userRepository.findByUsername("other"))
                 .thenReturn(Optional.of(otherUser));
 
-        assertThrows(AccessDeniedException.class,
-                () -> transactionService.transfer(request, "other"));
+        assertThrows(
+                AccessDeniedException.class,
+                () -> transactionService.transfer(request, "other")
+        );
     }
 
-    // ---------------- GET BY ACCOUNT ----------------
+    // =====================================================
+    // GET TRANSACTIONS BY ACCOUNT
+    // =====================================================
 
     @Test
     void shouldGetTransactionsByAccount() {
-        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
-                .thenReturn(Optional.of(sender));
-
-        when(userRepository.findByUsername("john"))
-                .thenReturn(Optional.of(user));
 
         Transaction tx = Transaction.builder()
                 .id(1L)
@@ -183,22 +286,45 @@ class TransactionServiceTest {
                 .status("COMPLETED")
                 .senderAccount(sender)
                 .receiverAccount(receiver)
+                .createdAt(LocalDateTime.now())
                 .build();
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
 
         when(transactionRepository.findAllByAccountId(10L))
                 .thenReturn(List.of(tx));
 
-        var result =
+        List<TransactionResponse> result =
                 transactionService.getTransactionsByAccount("ACC1", "john");
 
         assertEquals(1, result.size());
-        assertEquals("REF1", result.get(0).getReferenceNumber());
+
+        TransactionResponse response = result.get(0);
+
+        assertEquals("REF1", response.getReferenceNumber());
+        assertEquals("DEBIT", response.getDirection());
     }
 
-    // ---------------- GET ALL ----------------
+    @Test
+    void shouldThrowException_whenAccountHistoryNotFound() {
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> transactionService.getTransactionsByAccount("ACC1", "john")
+        );
+    }
+
+    // =====================================================
+    // GET ALL TRANSACTIONS
+    // =====================================================
 
     @Test
     void shouldGetAllTransactions() {
+
         Transaction tx = Transaction.builder()
                 .id(1L)
                 .referenceNumber("REF1")
@@ -207,32 +333,68 @@ class TransactionServiceTest {
         when(transactionRepository.findAllWithDetails())
                 .thenReturn(List.of(tx));
 
-        var result = transactionService.getAllTransactions();
+        List<TransactionResponse> result =
+                transactionService.getAllTransactions();
 
         assertEquals(1, result.size());
     }
 
-    // ---------------- GET BY USERNAME ----------------
+    // =====================================================
+    // GET TRANSACTIONS BY USERNAME
+    // =====================================================
 
     @Test
     void shouldGetTransactionsByUsername() {
-        when(userRepository.findByUsername("john"))
-                .thenReturn(Optional.of(user));
-
-        when(accountRepository.findByUserId(1L))
-                .thenReturn(List.of(sender));
 
         Transaction tx = Transaction.builder()
                 .id(1L)
+                .referenceNumber("TXN1")
                 .senderAccount(sender)
+                .receiverAccount(receiver)
+                .createdAt(LocalDateTime.now())
                 .build();
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.findActiveAccountsByUserId(1L))
+                .thenReturn(List.of(sender));
 
         when(transactionRepository.findAllByAccountId(10L))
                 .thenReturn(List.of(tx));
 
-        var result =
+        List<TransactionResponse> result =
                 transactionService.getTransactionsByUsername("john");
 
         assertEquals(1, result.size());
+
+        assertEquals("TXN1", result.get(0).getReferenceNumber());
+    }
+
+    @Test
+    void shouldReturnEmptyList_whenUserHasNoAccounts() {
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.findActiveAccountsByUserId(1L))
+                .thenReturn(List.of());
+
+        List<TransactionResponse> result =
+                transactionService.getTransactionsByUsername("john");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void shouldThrowException_whenUsernameNotFound() {
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> transactionService.getTransactionsByUsername("john")
+        );
     }
 }

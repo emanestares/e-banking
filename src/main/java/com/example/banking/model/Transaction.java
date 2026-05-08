@@ -1,6 +1,8 @@
 package com.example.banking.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -30,6 +32,8 @@ public class Transaction {
     private Account receiverAccount;
 
     @Column(nullable = false, precision = 18, scale = 2)
+    @Digits(integer = 16, fraction = 2)
+    @DecimalMin(value = "0.01", message = "Amount must be at least 0.01")
     private BigDecimal amount;
 
     @Column(name = "transaction_type", nullable = false, length = 50)

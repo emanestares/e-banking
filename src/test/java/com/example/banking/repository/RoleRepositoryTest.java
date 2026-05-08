@@ -1,12 +1,12 @@
 package com.example.banking.repository;
 
 import com.example.banking.model.Role;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-
-import jakarta.persistence.EntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
@@ -23,9 +23,14 @@ class RoleRepositoryTest {
     @Autowired
     private EntityManager entityManager;
 
+    // =====================================================
+    // FIND BY NAME
+    // =====================================================
+
     @Test
     @DisplayName("should find role by name")
     void shouldFindByName() {
+
         Role role = Role.builder()
                 .name("ROLE_ADMIN")
                 .build();
@@ -33,7 +38,8 @@ class RoleRepositoryTest {
         entityManager.persist(role);
         entityManager.flush();
 
-        Optional<Role> result = roleRepository.findByName("ROLE_ADMIN");
+        Optional<Role> result =
+                roleRepository.findByName("ROLE_ADMIN");
 
         assertTrue(result.isPresent());
         assertEquals("ROLE_ADMIN", result.get().getName());
@@ -42,23 +48,35 @@ class RoleRepositoryTest {
     @Test
     @DisplayName("should return empty when role not found")
     void shouldReturnEmptyWhenRoleNotFound() {
-        Optional<Role> result = roleRepository.findByName("ROLE_UNKNOWN");
+
+        Optional<Role> result =
+                roleRepository.findByName("ROLE_UNKNOWN");
 
         assertTrue(result.isEmpty());
     }
 
+    // =====================================================
+    // UNIQUE CONSTRAINT
+    // =====================================================
+
     @Test
     @DisplayName("should enforce unique role name constraint")
     void shouldEnforceUniqueConstraint() {
-        Role role1 = Role.builder().name("ROLE_USER").build();
-        Role role2 = Role.builder().name("ROLE_USER").build();
+
+        Role role1 = Role.builder()
+                .name("ROLE_USER")
+                .build();
+
+        Role role2 = Role.builder()
+                .name("ROLE_USER")
+                .build();
 
         entityManager.persist(role1);
         entityManager.flush();
 
-        assertThrows(Exception.class, () -> {
+        assertThrows(PersistenceException.class, () -> {
             entityManager.persist(role2);
-            entityManager.flush(); // triggers constraint violation
+            entityManager.flush(); // exception happens HERE
         });
     }
 }

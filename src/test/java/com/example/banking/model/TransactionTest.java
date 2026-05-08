@@ -11,6 +11,7 @@ class TransactionTest {
 
     @Test
     void shouldBuildTransactionWithDefaults() {
+
         Transaction transaction = Transaction.builder()
                 .referenceNumber("REF123")
                 .amount(new BigDecimal("100.00"))
@@ -18,20 +19,22 @@ class TransactionTest {
                 .build();
 
         assertNotNull(transaction);
+
         assertEquals("REF123", transaction.getReferenceNumber());
         assertEquals(new BigDecimal("100.00"), transaction.getAmount());
         assertEquals("TRANSFER", transaction.getTransactionType());
 
-        // Default value check
+        // default value from builder
         assertEquals("COMPLETED", transaction.getStatus());
 
-        // Relationships should be null unless set
+        // relations not set in builder
         assertNull(transaction.getSenderAccount());
         assertNull(transaction.getReceiverAccount());
     }
 
     @Test
     void shouldSetAndGetFieldsCorrectly() {
+
         Transaction transaction = new Transaction();
 
         transaction.setId(1L);
@@ -51,15 +54,18 @@ class TransactionTest {
 
     @Test
     void shouldInitializeCreatedAtOnPrePersist() {
+
         Transaction transaction = new Transaction();
 
         transaction.onCreate();
 
         assertNotNull(transaction.getCreatedAt());
+        assertTrue(transaction.getCreatedAt().isBefore(LocalDateTime.now().plusSeconds(1)));
     }
 
     @Test
     void shouldAllowCustomStatusInBuilder() {
+
         Transaction transaction = Transaction.builder()
                 .referenceNumber("REF777")
                 .amount(new BigDecimal("50.00"))
@@ -72,6 +78,7 @@ class TransactionTest {
 
     @Test
     void shouldCreateTransactionUsingAllArgsConstructor() {
+
         LocalDateTime now = LocalDateTime.now();
 
         Transaction transaction = new Transaction(
@@ -93,5 +100,17 @@ class TransactionTest {
         assertEquals("COMPLETED", transaction.getStatus());
         assertEquals("Sample", transaction.getDescription());
         assertEquals(now, transaction.getCreatedAt());
+    }
+
+    @Test
+    void shouldAllowNullDescription() {
+
+        Transaction transaction = Transaction.builder()
+                .referenceNumber("REF000")
+                .amount(BigDecimal.TEN)
+                .transactionType("TRANSFER")
+                .build();
+
+        assertNull(transaction.getDescription());
     }
 }

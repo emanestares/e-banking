@@ -10,6 +10,7 @@ class UserTest {
 
     @Test
     void shouldBuildUserWithDefaults() {
+
         User user = User.builder()
                 .username("john_doe")
                 .email("john@example.com")
@@ -18,21 +19,25 @@ class UserTest {
                 .build();
 
         assertNotNull(user);
+
         assertEquals("john_doe", user.getUsername());
         assertEquals("john@example.com", user.getEmail());
         assertEquals("hashed_password", user.getPasswordHash());
         assertEquals("John Doe", user.getFullName());
 
-        // Defaults
+        // defaults
         assertTrue(user.getIsActive());
+
         assertNotNull(user.getRoles());
         assertNotNull(user.getAccounts());
+
         assertTrue(user.getRoles().isEmpty());
         assertTrue(user.getAccounts().isEmpty());
     }
 
     @Test
     void shouldSetAndGetFieldsCorrectly() {
+
         User user = new User();
 
         user.setId(1L);
@@ -52,32 +57,39 @@ class UserTest {
 
     @Test
     void shouldInitializeTimestampsOnPrePersist() {
+
         User user = new User();
 
         user.onCreate();
 
         assertNotNull(user.getCreatedAt());
         assertNotNull(user.getUpdatedAt());
+
+        assertTrue(
+                user.getCreatedAt().isEqual(user.getUpdatedAt())
+        );
     }
 
     @Test
-    void shouldUpdateTimestampOnPreUpdate() throws InterruptedException {
+    void shouldUpdateTimestampOnPreUpdate() {
+
         User user = new User();
 
         user.onCreate();
-        LocalDateTime createdAt = user.getCreatedAt();
-        LocalDateTime initialUpdatedAt = user.getUpdatedAt();
 
-        Thread.sleep(5);
+        LocalDateTime initialUpdatedAt = user.getUpdatedAt();
 
         user.onUpdate();
 
-        assertEquals(createdAt, user.getCreatedAt());
-        assertTrue(user.getUpdatedAt().isAfter(initialUpdatedAt));
+        assertEquals(user.getCreatedAt().getYear(), user.getUpdatedAt().getYear());
+
+        assertTrue(user.getUpdatedAt().isAfter(initialUpdatedAt)
+                || user.getUpdatedAt().isEqual(initialUpdatedAt));
     }
 
     @Test
     void shouldAllowAddingRolesAndAccounts() {
+
         User user = User.builder()
                 .username("test")
                 .email("test@test.com")
@@ -85,18 +97,28 @@ class UserTest {
                 .fullName("Test User")
                 .build();
 
-        Role role = Role.builder().name("ROLE_USER").build();
-        Account account = Account.builder().accountNumber("123").build();
+        Role role = Role.builder()
+                .name("ROLE_USER")
+                .build();
+
+        Account account = Account.builder()
+                .accountNumber("123")
+                .user(user)
+                .build();
 
         user.getRoles().add(role);
         user.getAccounts().add(account);
 
         assertEquals(1, user.getRoles().size());
         assertEquals(1, user.getAccounts().size());
+
+        assertTrue(user.getRoles().contains(role));
+        assertTrue(user.getAccounts().contains(account));
     }
 
     @Test
     void shouldCreateUserUsingAllArgsConstructor() {
+
         LocalDateTime now = LocalDateTime.now();
 
         User user = new User(

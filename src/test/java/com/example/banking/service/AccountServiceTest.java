@@ -1,22 +1,31 @@
 package com.example.banking.service;
 
 import com.example.banking.dto.AccountResponse;
+import com.example.banking.dto.EnrollRequest;
 import com.example.banking.model.Account;
 import com.example.banking.model.Role;
 import com.example.banking.model.User;
 import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class AccountServiceTest {
 
     @InjectMocks
@@ -33,7 +42,6 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
 
         user = User.builder()
                 .id(1L)
@@ -54,6 +62,7 @@ class AccountServiceTest {
 
     @Test
     void shouldReturnAccount_whenOwnerRequestsOwnAccount() {
+
         when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC123"))
                 .thenReturn(Optional.of(account));
 
@@ -63,11 +72,16 @@ class AccountServiceTest {
         assertNotNull(response);
         assertEquals("ACC123", response.getAccountNumber());
         assertEquals("john", response.getOwnerUsername());
+
+        verify(accountRepository).findByAccountNumberAndIsActiveTrue("ACC123");
     }
 
     @Test
     void shouldAllowAdminToAccessAnyAccount() {
-        Role adminRole = Role.builder().name("ROLE_ADMIN").build();
+
+        Role adminRole = Role.builder()
+                .name("ROLE_ADMIN")
+                .build();
 
         User admin = User.builder()
                 .username("admin")
@@ -89,9 +103,10 @@ class AccountServiceTest {
 
     @Test
     void shouldThrowAccessDenied_whenNonOwnerAndNotAdmin() {
+
         User otherUser = User.builder()
                 .username("other")
-                .roles(Set.of()) // no admin role
+                .roles(Set.of())
                 .build();
 
         when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC123"))
@@ -100,21 +115,29 @@ class AccountServiceTest {
         when(userRepository.findByUsername("other"))
                 .thenReturn(Optional.of(otherUser));
 
-        assertThrows(AccessDeniedException.class, () ->
-                accountService.getAccountByNumber("ACC123", "other"));
+        assertThrows(
+                AccessDeniedException.class,
+                () -> accountService.getAccountByNumber("ACC123", "other")
+        );
     }
 
     @Test
     void shouldThrowException_whenAccountNotFound() {
+
         when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC123"))
                 .thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () ->
-                accountService.getAccountByNumber("ACC123", "john"));
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> accountService.getAccountByNumber("ACC123", "john")
+        );
+
+        assertTrue(ex.getMessage().contains("Account not found"));
     }
 
     @Test
     void shouldReturnAccountsByUsername() {
+
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
 
@@ -130,19 +153,26 @@ class AccountServiceTest {
 
     @Test
     void shouldThrowException_whenUserNotFound() {
+
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () ->
-                accountService.getAccountsByUsername("john"));
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> accountService.getAccountsByUsername("john")
+        );
+
+        assertTrue(ex.getMessage().contains("User not found"));
     }
 
     @Test
     void shouldReturnAllAccounts() {
+
         when(accountRepository.findAllActiveAccountsWithUsers())
                 .thenReturn(List.of(account));
 
-        List<AccountResponse> responses = accountService.getAllAccounts();
+        List<AccountResponse> responses =
+                accountService.getAllAccounts();
 
         assertEquals(1, responses.size());
         assertEquals("ACC123", responses.get(0).getAccountNumber());
@@ -150,6 +180,7 @@ class AccountServiceTest {
 
     @Test
     void shouldMapAccountToResponseCorrectly() {
+
         when(accountRepository.findAllActiveAccountsWithUsers())
                 .thenReturn(List.of(account));
 
@@ -161,8 +192,97 @@ class AccountServiceTest {
         assertEquals(account.getBalance(), response.getBalance());
         assertEquals(account.getAccountType(), response.getAccountType());
         assertEquals(account.getIsActive(), response.getIsActive());
+
         assertEquals(user.getFullName(), response.getOwnerFullName());
         assertEquals(user.getUsername(), response.getOwnerUsername());
         assertEquals(user.getId(), response.getOwnerId());
+    }
+
+    @Test
+    void shouldEnrollSavingsAccountSuccessfully() {
+
+        EnrollRequest request = new EnrollRequest();
+        request.setAccountType("SAVINGS");
+        request.setInitialDeposit(BigDecimal.valueOf(500));
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.existsByAccountNumber(any()))
+                .thenReturn(false);
+
+        when(accountRepository.save(any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccountResponse response =
+                accountService.enrollAccount("john", request);
+
+        assertNotNull(response);
+        assertEquals("SAVINGS", response.getAccountType());
+        assertEquals(BigDecimal.valueOf(500), response.getBalance());
+        assertEquals("john", response.getOwnerUsername());
+
+        assertTrue(response.getAccountNumber().startsWith("ACC-"));
+
+        verify(accountRepository).save(any(Account.class));
+    }
+
+    @Test
+    void shouldDefaultToSavings_whenAccountTypeIsInvalid() {
+
+        EnrollRequest request = new EnrollRequest();
+        request.setAccountType("INVALID");
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.existsByAccountNumber(any()))
+                .thenReturn(false);
+
+        when(accountRepository.save(any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccountResponse response =
+                accountService.enrollAccount("john", request);
+
+        assertEquals("SAVINGS", response.getAccountType());
+    }
+
+    @Test
+    void shouldDefaultDepositToZero_whenDepositIsNull() {
+
+        EnrollRequest request = new EnrollRequest();
+        request.setAccountType("CHECKING");
+        request.setInitialDeposit(null);
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.existsByAccountNumber(any()))
+                .thenReturn(false);
+
+        when(accountRepository.save(any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccountResponse response =
+                accountService.enrollAccount("john", request);
+
+        assertEquals(BigDecimal.ZERO, response.getBalance());
+    }
+
+    @Test
+    void shouldThrowException_whenEnrollUserNotFound() {
+
+        EnrollRequest request = new EnrollRequest();
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> accountService.enrollAccount("john", request)
+        );
+
+        assertTrue(ex.getMessage().contains("User not found"));
     }
 }

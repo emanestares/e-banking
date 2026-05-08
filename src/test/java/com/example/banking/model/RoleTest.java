@@ -8,6 +8,7 @@ class RoleTest {
 
     @Test
     void shouldCreateRoleUsingBuilder() {
+
         Role role = Role.builder()
                 .id(1L)
                 .name("ROLE_ADMIN")
@@ -20,6 +21,7 @@ class RoleTest {
 
     @Test
     void shouldSetAndGetValuesCorrectly() {
+
         Role role = new Role();
 
         role.setId(2L);
@@ -31,6 +33,7 @@ class RoleTest {
 
     @Test
     void shouldCreateRoleUsingAllArgsConstructor() {
+
         Role role = new Role(3L, "ROLE_MANAGER");
 
         assertEquals(3L, role.getId());
@@ -39,6 +42,7 @@ class RoleTest {
 
     @Test
     void shouldCreateEmptyRoleUsingNoArgsConstructor() {
+
         Role role = new Role();
 
         assertNull(role.getId());
@@ -47,6 +51,7 @@ class RoleTest {
 
     @Test
     void shouldAllowUpdatingName() {
+
         Role role = Role.builder()
                 .name("ROLE_USER")
                 .build();
@@ -54,5 +59,17 @@ class RoleTest {
         role.setName("ROLE_ADMIN");
 
         assertEquals("ROLE_ADMIN", role.getName());
+    }
+
+    @Test
+    void shouldAllowNullNameInitiallyButBeSetLater() {
+
+        Role role = new Role();
+
+        assertNull(role.getName());
+
+        role.setName("ROLE_USER");
+
+        assertEquals("ROLE_USER", role.getName());
     }
 }
