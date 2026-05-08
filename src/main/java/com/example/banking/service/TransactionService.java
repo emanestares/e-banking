@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -141,26 +142,25 @@ public class TransactionService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        List<Account> accounts = accountRepository.findActiveAccountsByUserId(user.getId());
-        if (accounts.isEmpty()) return List.of();
-
-        // Collect all account IDs for this user
-        java.util.Set<Long> accountIds = accounts.stream()
+        Set<Long> userAccountIds = accountRepository
+                .findActiveAccountsByUserId(user.getId())
+                .stream()
                 .map(Account::getId)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
-        // Gather transactions from all accounts, deduplicate by id, sort by date descending
-        return accounts.stream()
-                .flatMap(acc -> transactionRepository.findAllByAccountId(acc.getId()).stream()
-                        .map(t -> mapToResponse(t, acc.getId())))
-                .collect(java.util.LinkedHashMap<Long, TransactionResponse>::new,
-                        (map, t) -> map.putIfAbsent(t.getId(), t),
-                        java.util.LinkedHashMap::putAll)
-                .values().stream()
-                .sorted(java.util.Comparator.comparing(
-                        TransactionResponse::getCreatedAt,
-                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
-                .collect(java.util.stream.Collectors.toList());
+        if (userAccountIds.isEmpty()) return List.of();
+
+        return transactionRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(t -> {
+                    // Determine perspective: DEBIT if the sender account belongs to this user
+                    Long perspectiveId = (t.getSenderAccount() != null &&
+                            userAccountIds.contains(t.getSenderAccount().getId()))
+                            ? t.getSenderAccount().getId()
+                            : (t.getReceiverAccount() != null ? t.getReceiverAccount().getId() : null);
+                    return mapToResponse(t, perspectiveId);
+                })
+                .collect(Collectors.toList());
     }
 
     // -------------------------------------------------------

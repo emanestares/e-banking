@@ -201,7 +201,8 @@ angular.module('bankingApp', [])
     $scope.pageTitle = pageTitles[page] || page;
 
     if (page === 'dashboard') { loadAccounts(); loadTransactions(); }
-    if (page === 'accounts' || page === 'transfer' || page === 'enroll') { loadAccounts(); }
+    if (page === 'accounts' || page === 'enroll') { loadAccounts(); }
+    if (page === 'transfer') { loadAccounts(); loadTransactions(); }
     if (page === 'transactions') { loadTransactions(); }
     if (page === 'admin') { $scope.adminTab = 'accounts'; $scope.loadAdminAccounts(); }
 
@@ -217,24 +218,20 @@ angular.module('bankingApp', [])
         $scope.accounts = res.data.data;
         $scope.totalBalance = $scope.accounts.reduce((s, a) => s + parseFloat(a.balance || 0), 0);
       })
+      .catch(function (err) {
+        if (err.status === 401) $scope.logout();
+      })
       .finally(function () { $scope.loadingAccounts = false; });
   }
-
-  // Public wrappers so buttons can call them
-  $scope.loadAccountsPublic      = loadAccounts;
-  $scope.loadTransactionsPublic  = loadTransactions;
-  $scope.refreshDashboard        = function () { loadAccounts(); loadTransactions(); };
 
   function loadTransactions() {
     $scope.loadingTxns = true;
     $http.get(API + '/transactions/my', { headers: authHeaders() })
       .then(function (res) {
-        // 1. Assign data once
         var data = res.data.data || [];
-              $scope.transactions = data;
-              $scope.recentTransactions = data;
+        $scope.transactions = data;
+        $scope.recentTransactions = data;
 
-        // 2. Calculate totals using the 'data' variable
         $scope.totalCredits = data
           .filter(function (t) { return t.direction === 'CREDIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
@@ -243,10 +240,8 @@ angular.module('bankingApp', [])
           .filter(function (t) { return t.direction === 'DEBIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
 
-        // 3. Update the filter for the table
         $scope.updateTxnFilter();
 
-        // 4. Build recipients list
         var seen = {};
         var myAccountNumbers = ($scope.accounts || []).map(function(a){ return a.accountNumber; });
         $scope.pastRecipients = [];
@@ -262,10 +257,16 @@ angular.module('bankingApp', [])
           }
         });
       })
-      .finally(function () {
-        $scope.loadingTxns = false;
-      });
+      .catch(function (err) {
+        if (err.status === 401) $scope.logout();
+      })
+      .finally(function () { $scope.loadingTxns = false; });
   }
+
+  // Public wrappers — defined AFTER function declarations
+  $scope.loadAccountsPublic     = loadAccounts;
+  $scope.loadTransactionsPublic = loadTransactions;
+  $scope.refreshDashboard       = function () { loadAccounts(); loadTransactions(); };
 
   // ── Autocomplete helpers ────────────────────────────────────
   $scope.pastRecipients       = [];
@@ -362,7 +363,7 @@ angular.module('bankingApp', [])
 
       if (!$scope.quickTransfer.senderAccountNumber) { $scope.quickTransferFieldErrors.senderAccountNumber = true; hasError = true; }
       if (!$scope.quickTransfer.receiverAccountNumber) { $scope.quickTransferFieldErrors.receiverAccountNumber = true; hasError = true; }
-      if (!$scope.quickTransfer.amount || $scope.quickTransfer.amount <= 0) { $scope.quickTransferFieldErrors.amount = true; hasError = true; }
+      if (!$scope.quickTransfer.amount || parseFloat($scope.quickTransfer.amount) <= 0) { $scope.quickTransferFieldErrors.amount = true; hasError = true; }
 
       if (hasError) { $scope.quickTransferError = 'Please fill in required fields.'; return; }
 
