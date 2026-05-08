@@ -134,44 +134,40 @@ angular.module('bankingApp', [])
 
   $scope.signup = function () {
       $scope.signupError = null;
+
+      // 1. Reset field errors at the start of the attempt
       $scope.signupFieldErrors = {};
-      var hasError = false;
 
-      if (!$scope.signupData.fullName) { $scope.signupFieldErrors.fullName = true; hasError = true; }
-      if (!$scope.signupData.username) { $scope.signupFieldErrors.username = true; hasError = true; }
-      if (!$scope.signupData.email)    { $scope.signupFieldErrors.email = true;    hasError = true; }
-      if (!$scope.signupData.password) { $scope.signupFieldErrors.password = true; hasError = true; }
-
-      if (hasError) {
-          $scope.signupError = 'Please fill in all required fields.';
-          return;
-      }
-
+      // 2. Perform local check for mismatch
+      var mismatch = false;
       if ($scope.signupData.password !== $scope.signupData.confirmPassword) {
-          $scope.signupError = 'Passwords do not match.';
-          $scope.signupFieldErrors.confirmPassword = true;
-          return;
+          $scope.signupFieldErrors.confirmPassword = "Passwords do not match.";
+          $scope.signupError = 'Please fix the highlighted errors.';
+          mismatch = true;
+          // DO NOT RETURN HERE. Let the code continue so the backend can also validate.
       }
 
       $scope.signupLoading = true;
+
       var payload = {
           username: $scope.signupData.username,
           email: $scope.signupData.email,
           password: $scope.signupData.password,
           fullName: $scope.signupData.fullName,
-          initialDeposit: $scope.signupData.initialDeposit || 0
+          initialDeposit: $scope.signupData.initialDeposit
       };
 
       $http.post(API + '/auth/signup', payload)
           .then(function (res) {
-              localStorage.setItem('jwt', res.data.data.token);
-              $scope.isLoggedIn = true;
-              $scope.currentUser = res.data.data;
-              $scope.showSignup = false;
+              // Use applySession to force a redirect and data reload
+              applySession(res.data.data);
           })
+
           .catch(function (err) {
               if (err.data && err.data.data) {
-                  $scope.signupFieldErrors = err.data.data;
+                  // Use angular.extend to MERGE the backend errors with our local mismatch error
+                  // This ensures "Passwords do not match" stays visible alongside DTO errors
+                  angular.extend($scope.signupFieldErrors, err.data.data);
                   $scope.signupError = "Please fix the highlighted errors.";
               } else {
                   $scope.signupError = (err.data && err.data.message) || "Registration failed.";

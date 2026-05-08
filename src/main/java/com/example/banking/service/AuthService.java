@@ -68,7 +68,6 @@ public class AuthService {
             throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
         }
 
-        // Roles table must have ROLE_USER seeded
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new RuntimeException(
                         "ROLE_USER not found in database. Please seed the roles table."));
@@ -82,13 +81,15 @@ public class AuthService {
                 .roles(Set.of(userRole))
                 .build();
 
+        // Save user to ensure the ID is generated for the account relationship
         userRepository.save(user);
 
-        BigDecimal deposit = (request.getInitialDeposit() != null &&
-                              request.getInitialDeposit().compareTo(BigDecimal.ZERO) > 0)
+        // Ensure deposit is at least 0.00 if null, or use the DTO value
+        BigDecimal deposit = (request.getInitialDeposit() != null)
                 ? request.getInitialDeposit()
                 : BigDecimal.ZERO;
 
+        // Create the initial account linked to the user
         Account account = Account.builder()
                 .accountNumber(generateAccountNumber())
                 .user(user)
@@ -99,7 +100,7 @@ public class AuthService {
 
         accountRepository.save(account);
 
-        // Auto-login after registration
+        // Perform Authentication
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
@@ -110,8 +111,16 @@ public class AuthService {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        return new LoginResponse(jwt, user.getUsername(), user.getFullName(),
-                roles, account.getId(), account.getAccountNumber());
+        // CRITICAL: Ensure the response includes the new account's ID and Number
+        // This allows app.js applySession() to populate $scope.currentUser correctly
+        return new LoginResponse(
+                jwt,
+                user.getUsername(),
+                user.getFullName(),
+                roles,
+                account.getId(),
+                account.getAccountNumber()
+        );
     }
 
     private String generateAccountNumber() {
