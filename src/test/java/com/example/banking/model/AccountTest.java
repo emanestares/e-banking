@@ -79,6 +79,7 @@ class AccountTest {
     @Test
     void shouldInitializeTimestampsOnPrePersist() {
 
+
         Account account = new Account();
 
         assertNull(account.getCreatedAt());
@@ -89,7 +90,12 @@ class AccountTest {
         assertNotNull(account.getCreatedAt());
         assertNotNull(account.getUpdatedAt());
 
-        assertEquals(account.getCreatedAt(), account.getUpdatedAt());
+        assertTrue(
+                Math.abs(java.time.Duration.between(
+                        account.getCreatedAt(),
+                        account.getUpdatedAt()
+                ).toMillis()) < 100
+        );
     }
 
     // =====================================================

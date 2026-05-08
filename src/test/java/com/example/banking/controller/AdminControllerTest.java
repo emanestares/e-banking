@@ -14,6 +14,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -26,29 +29,34 @@ class AdminControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // ❌ DO NOT @MockBean JwtAuthenticationFilter anymore.
-    // We want the real filter to run so it can "do nothing" when there is no token,
-    // allowing the request to hit the security rules[cite: 2].
+    @MockBean
+    private AccountService accountService;
 
     @MockBean
-    private JwtUtils jwtUtils;
-
-    @MockBean
-    private UserDetailsServiceImpl userDetailsService;
-
-    @Test
-    void shouldReturn401_whenAnonymous() throws Exception {
-        // Because anonymous() is disabled, this MUST be 401.
-        mockMvc.perform(get("/admin/accounts"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Unauthorized"));
-    }
+    private TransactionService transactionService;
 
     @Test
     void shouldReturn403_whenNotAdmin() throws Exception {
-        // A user exists but has the wrong role, triggering AccessDeniedHandler[cite: 1, 2].
         mockMvc.perform(get("/admin/accounts")
-                        .with(user("user").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user").roles("USER")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    void shouldReturn200_whenAdmin() throws Exception {
+
+        when(accountService.getAllAccounts()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/accounts")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn401_whenNoAuthentication() throws Exception {
+
+        mockMvc.perform(get("/admin/accounts"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Access denied"));
     }

@@ -104,14 +104,16 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // to know if it is a 401 or a 403 behavior
-                .anonymous(AbstractHttpConfigurer::disable)
+
 
                 // this handles access denied
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler())
                 )
+
+                .anonymous(anonymous -> anonymous.disable())
+
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/auth/**", "/", "/index.html", "/app/**", "/assets/**").permitAll()

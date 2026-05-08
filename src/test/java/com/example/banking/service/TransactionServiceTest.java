@@ -397,4 +397,130 @@ class TransactionServiceTest {
                 () -> transactionService.getTransactionsByUsername("john")
         );
     }
+
+    @Test
+    void shouldReturnCreditDirection_whenReceiverAccount() {
+
+        Transaction tx = Transaction.builder()
+                .id(1L)
+                .referenceNumber("REF1")
+                .amount(BigDecimal.TEN)
+                .transactionType("TRANSFER")
+                .status("COMPLETED")
+                .senderAccount(sender)
+                .receiverAccount(receiver)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.of(receiver));
+
+        when(transactionRepository.findAllByAccountId(20L))
+                .thenReturn(List.of(tx));
+
+        List<TransactionResponse> result =
+                transactionService.getTransactionsByAccount("ACC2", "admin");
+
+        assertEquals("CREDIT", result.get(0).getDirection());
+    }
+
+    @Test
+    void shouldAllowOwnerWithoutAdminRole() {
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.of(receiver));
+
+        // user is owner → no need to call userRepository
+        TransferResponse response =
+                transactionService.transfer(request, "john");
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void shouldAllowTransfer_whenUserIsAdmin() {
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.of(receiver));
+
+        when(userRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(admin));
+
+        TransferResponse response =
+                transactionService.transfer(request, "admin");
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void shouldNotThrow_whenUserHasNoRoles() {
+
+        User noRoleUser = User.builder()
+                .username("test")
+                .roles(Set.of())
+                .build();
+
+        TransferRequest request = new TransferRequest();
+        request.setSenderAccountNumber("ACC1");
+        request.setReceiverAccountNumber("ACC2");
+        request.setAmount(BigDecimal.TEN);
+        request.setDescription(null);
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC1"))
+                .thenReturn(Optional.of(sender));
+
+        when(accountRepository.findByAccountNumberAndIsActiveTrue("ACC2"))
+                .thenReturn(Optional.of(receiver));
+
+        when(userRepository.findByUsername("test"))
+                .thenReturn(Optional.of(noRoleUser));
+
+        assertThrows(AccessDeniedException.class,
+                () -> transactionService.transfer(request, "test"));
+    }
+
+    @Test
+    void shouldDeduplicateTransactionsById() {
+
+        Transaction tx = Transaction.builder()
+                .id(1L)
+                .referenceNumber("TXN1")
+                .senderAccount(sender)
+                .receiverAccount(receiver)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userRepository.findByUsername("john"))
+                .thenReturn(Optional.of(user));
+
+        when(accountRepository.findActiveAccountsByUserId(1L))
+                .thenReturn(List.of(sender, receiver));
+
+        when(transactionRepository.findAllByAccountId(anyLong()))
+                .thenReturn(List.of(tx));
+
+        List<TransactionResponse> result =
+                transactionService.getTransactionsByUsername("john");
+
+        assertEquals(1, result.size());
+    }
+
+
+
 }

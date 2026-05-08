@@ -100,8 +100,10 @@ class TransferRequestTest {
         Set<ConstraintViolation<TransferRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(violations.stream()
-                .anyMatch(v -> v.getMessage().contains("at least 0.01")));
+        assertTrue(
+                violations.stream()
+                        .anyMatch(v -> v.getMessage().equals("Amount must be greater than 0"))
+        );
     }
 
     // ---------------- AMOUNT DIGITS ----------------
