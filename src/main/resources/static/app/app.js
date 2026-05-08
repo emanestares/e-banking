@@ -160,6 +160,8 @@ angular.module('bankingApp', [])
       $http.post(API + '/auth/signup', payload)
           .then(function (res) {
               // Use applySession to force a redirect and data reload
+              // This helper automatically sets tokens, user data,
+              // and calls navigate('dashboard'), which loads the accounts.
               applySession(res.data.data);
           })
 
