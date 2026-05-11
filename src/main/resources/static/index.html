@@ -321,8 +321,7 @@
                   <div class="balance-amount">{{ acc.balance | currency:'₱' }}</div>
                 </div>
               </div>
-              <div class="account-card ellipsis-row" ng-if="accounts.length > 5" ng-click="currentPage='accounts'" style="cursor: pointer; justify-content: center; background: var(--gray-50); border: 1px dashed var(--gray-300);">
-                <div style="text-align: center; color: var(--gray-500); padding: 0.5rem;">
+                <div class="account-card ellipsis-row" ng-if="accounts.length > 5" ng-click="navigate('accounts')" style="cursor: pointer; justify-content: center; background: var(--gray-50); border: 1px dashed var(--gray-300);">                <div style="text-align: center; color: var(--gray-500); padding: 0.5rem;">
                   <i class="fas fa-ellipsis-h"></i>
                   <span style="font-size: 0.85rem; display: block;">+{{ accounts.length - 5 }} more accounts. Click view all for the other accounts</span>
                 </div>

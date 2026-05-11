@@ -3,7 +3,7 @@
 ---
 
 ## Slide 1: Title Slide
-**Good [morning/afternoon], everyone. My name is [Your Name] and today I'm presenting my capstone project: E-Banking — a secure banking system REST API built with Spring Boot.**
+**Good [morning/afternoon], everyone. My name is Richard and Emman and today I'm presenting my capstone project: E-Banking — a secure banking system REST API built with Spring Boot.**
 
 ---
 
@@ -12,10 +12,11 @@
 
 **Key Features:**
 - User registration and JWT-based authentication
-- Account enrollment and management for customers
-- Secure fund transfers between accounts
-- Transaction history tracking
+- Account enrollment and management with account types (SAVINGS/CHECKING)
+- Secure fund transfers between accounts with transaction descriptions
+- Detailed transaction history with reference numbers and status
 - Admin dashboard for viewing all accounts and transactions
+- Account status management (active/inactive)
 - Comprehensive validation and error handling
 - RESTful API design with proper HTTP status codes
 - Security with Spring Security and JWT tokens
@@ -58,49 +59,56 @@
 **Architecture diagram:**
 
 ```
-┌─────────────────────────────────────────┐
-│     Frontend (Angular/React/etc.)      │
-└──────────────┬──────────────────────────┘
-               │ HTTP Requests / JSON
-┌──────────────▼──────────────────────────┐
-│  Controllers (Auth, Account, Transaction│
+┌──────────────────────────────────────────┐
+│     Frontend (Angular/React/etc.)        │
+└───────────────┬──────────────────────────┘
+                │ HTTP Requests / JSON
+┌───────────────▼──────────────────────────┐
+│  Controllers (Auth, Account, Transaction │
 ├──────────────────────────────────────────┤
-│  Services (Auth, Account, Transaction)  │
+│  Services (Auth, Account, Transaction)   │
 ├──────────────────────────────────────────┤
-│  Repositories (JPA / DB access)         │
+│  Repositories (JPA / DB access)          │
 ├──────────────────────────────────────────┤
 │  Models / Entities (User, Account, Trans)│
-└──────────────┬──────────────────────────┘
+└──────────────┬───────────────────────────┘
                │ JPA / Hibernate
-┌──────────────▼──────────────────────────┐
-│           MS SQL Server Database        │
-└─────────────────────────────────────────┘
+┌──────────────▼───────────────────────────┐
+│           MS SQL Server Database         │
+└──────────────────────────────────────────┘
 ```
 
 **Database Relationships:**
 
 ```
-┌──────────┐       ┌────────────┐
-│   User   │       │  Account   │
-├──────────┤       ├────────────┤
-│ id (PK)  │1----N │ id (PK)    │
-│ username │       │ accountNum │
-│ password │       │ balance    │
-│ roles    │       │ user_id(FK)│
-└──────────┘       └────────────┘
-                   │
-                   │1----N
-                   ▼
-            ┌──────────────┐
-            │ Transaction  │
-            ├──────────────┤
-            │ id (PK)      │
-            │ amount       │
-            │ type         │
-            │ timestamp    │
-            │ account_id   │
-            │ to_account_id│
-            └──────────────┘
+┌──────────┐          ┌────────────┐
+│   User   │          │  Account   │
+├──────────┤          ├────────────┤
+│ id (PK)  │1----Many │ id (PK)    │
+│ username │          │ accountNum │
+│ password │          │ balance    │
+│ roles    │          │ user_id(FK)│
+│          │          │ accountType│
+│          │          │ isActive   │
+│          │          │ createdAt  │
+│          │          │ updatedAt  │
+└──────────┘          └────────────┘
+                            │
+                            │1----Many
+                            ▼
+                     ┌──────────────┐
+                     │ Transaction  │
+                     ├──────────────┤
+                     │ id (PK)      │
+                     │ referenceNum │
+                     │ sender_id(FK)│
+                     │ receiver_id  │
+                     │ amount       │
+                     │ type         │
+                     │ status       │
+                     │ description  │
+                     │ createdAt    │
+                     └──────────────┘
 ```
 
 ---
@@ -125,19 +133,19 @@
 └──────┬──────┘
        │
        ▼
-┌─────────────┐     ┌─────────────┐
-│ JWT Present?│────▶│   No       │────▶ 401 Unauthorized
-└──────┬──────┘     └─────────────┘
+┌─────────────┐      ┌──────────────┐
+│ JWT Present?│────▶│   No          │────▶ 401 Unauthorized
+└──────┬──────┘      └──────────────┘
        │
        ▼
-┌─────────────┐     ┌─────────────┐
-│ JWT Valid?  │────▶│   No       │────▶ 401 Unauthorized
-└──────┬──────┘     └─────────────┘
+┌─────────────┐     ┌───────────────┐
+│ JWT Valid?  │────▶│   No          │────▶ 401 Unauthorized
+└──────┬──────┘     └───────────────┘
        │
        ▼
-┌─────────────┐     ┌─────────────┐
-│ Check Role  │────▶│ Insufficient│────▶ 403 Forbidden
-└──────┬──────┘     └─────────────┘
+┌─────────────┐     ┌───────────────┐
+│ Check Role  │────▶│ Insufficient  │────▶ 403 Forbidden
+└──────┬──────┘     └───────────────┘
        │
        ▼
 ┌─────────────┐
@@ -152,30 +160,33 @@
 **Core entities and how they relate:**
 
 - **User**: authentication credentials and role (USER/ADMIN)
-- **Account**: bank account details linked to a user
-- **Transaction**: financial transactions (deposits, withdrawals, transfers)
+- **Account**: bank account details linked to a user with type and status
+- **Transaction**: financial transactions with reference numbers, types, and descriptions
 - **Role**: user roles for authorization
 
 **Relationships:**
 - User → Account: one-to-many
-- Account → Transaction: one-to-many
-- Transaction can reference two accounts (from/to for transfers)
+- Account → Transaction: one-to-many (as sender or receiver)
+- Transaction references two accounts (from/to for transfers)
 
 **Entity Relationship Table:**
 
-| Entity | Relationship | Target Entity | Cardinality | Description |
-|--------|--------------|---------------|-------------|-------------|
-| User | owns | Account | 1:N | One user can have multiple accounts |
-| Account | has | Transaction | 1:N | One account can have multiple transactions |
-| Account | receives | Transaction | 1:N | Account can receive transfers |
-| Transaction | from | Account | N:1 | Transaction belongs to source account |
-| Transaction | to | Account | N:1 | Transaction can target another account |
+| Entity      | Relationship | Target Entity | Cardinality | Description |
+|-------------|--------------|---------------|-------------|--------------------------------------------|
+| User        | owns         | Account       | 1:Many      | One user can have multiple accounts        |
+| Account     | sends        | Transaction   | 1:Many      | One account can send multiple transactions |
+| Account     | receives     | Transaction   | 1:Many      | Account can receive transfers              |
+| Transaction | from         | Account       | Many:1      | Transaction belongs to source account      |
+| Transaction | to           | Account       | Many:1      | Transaction can target another account     |
 
 **Validation rules:**
-- Account numbers must be unique
+- Account numbers must be unique (10-20 characters)
+- Account types: SAVINGS or CHECKING
 - Transfers require sufficient balance
 - Users can only access their own accounts
 - Admins have system-wide access
+- Transactions have unique reference numbers
+- Account status affects accessibility
 
 ---
 
@@ -199,25 +210,25 @@
 **Security Flow:**
 
 ```
-┌─────────────┐
+┌────────────────┐
 │ Unauthenticated│
-└──────┬──────┘
+└──────┬─────────┘
        │ Login Success
        ▼
-┌─────────────┐
-│ Authenticated│
-└──────┬──────┘
+┌────────────────┐
+│ Authenticated  │
+└──────┬─────────┘
        │
-   ┌───▼────┐
-   │ Has    │
-   │ ROLE_USER│────▶ User Operations
-   └─────────┘
+   ┌───▼───────┐
+   │ Has       │
+   │ ROLE_USER │────▶ User Operations
+   └───────────┘
        │
        ▼
-   ┌─────────┐
-   │ Has     │
+   ┌───────────┐
+   │ Has       │
    │ ROLE_ADMIN│────▶ Admin Operations
-   └─────────┘
+   └───────────┘
 ```
 
 ---
@@ -232,11 +243,11 @@
 
 **Account Management:**
 - `GET /accounts/my` - Get user's accounts
-- `POST /accounts/enroll` - Enroll new account
+- `POST /accounts/enroll` - Enroll new account (specify type and initial deposit)
 - `GET /accounts/{number}` - Get specific account
 
 **Transactions:**
-- `POST /transactions/transfer` - Transfer funds
+- `POST /transactions/transfer` - Transfer funds (with description)
 - `GET /transactions/account/{number}` - Account transactions
 - `GET /transactions/my` - User's transactions
 
@@ -334,8 +345,10 @@ java -jar target/mini-banking-backend-1.0.0.jar
 ## Slide 14: Future Enhancements
 **Recommended future work:**
 - Add password encryption and reset workflows
-- Implement account types (savings, checking, etc.)
+- Implement account type-specific rules and limits
 - Add transaction limits and fraud detection
 - Introduce audit logging and compliance features
 - Add REST API documentation with Swagger/OpenAPI
 - Implement rate limiting and API versioning
+- Add account deactivation/reactivation
+- Implement transaction reversal capabilities
