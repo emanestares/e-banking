@@ -381,6 +381,30 @@ angular.module('bankingApp', [])
         .finally(function () { $scope.transferring = false; });
   };
 
+    // ── Clear Transaction ──────────────────────────────────────
+    $scope.clearTransfer = function() {
+      // 1. Reset data models
+      $scope.transfer = {};
+      $scope.quickTransfer = {};
+      $scope.senderBalance = null;
+
+      // 2. Clear UI state flags
+      $scope.transferRecipientPicked = false;
+      $scope.quickRecipientPicked = false;
+      $scope.showTransferSuggestions = false;
+      $scope.showQuickSuggestions = false;
+
+      // 3. Clear all messages
+      $scope.transferError = null;
+      $scope.transferSuccess = null;
+      $scope.quickTransferError = null;
+      $scope.quickTransferSuccess = null;
+
+      // 4. Clear field-specific validation errors
+      $scope.transferFieldErrors = {};
+      $scope.quickTransferFieldErrors = {};
+    };
+
   // ── Enroll Account ─────────────────────────────────────────
   $scope.doEnroll = function () {
       $scope.enrollError = $scope.enrollSuccess = null;
