@@ -388,19 +388,19 @@ angular.module('bankingApp', [])
       $scope.quickTransfer = {};
       $scope.senderBalance = null;
 
-      // 2. Clear UI state flags
+      // 2. Clear UI flags
       $scope.transferRecipientPicked = false;
       $scope.quickRecipientPicked = false;
       $scope.showTransferSuggestions = false;
       $scope.showQuickSuggestions = false;
 
-      // 3. Clear all messages
+      // 3. clear all error/success messages
       $scope.transferError = null;
       $scope.transferSuccess = null;
       $scope.quickTransferError = null;
       $scope.quickTransferSuccess = null;
 
-      // 4. Clear field-specific validation errors
+      // 4. Clear field-specific validation errors like transfer and quicktransfer sections
       $scope.transferFieldErrors = {};
       $scope.quickTransferFieldErrors = {};
     };
