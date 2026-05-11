@@ -59,7 +59,7 @@ public class TransactionService {
 
         // 4. Sufficient funds check
         if (sender.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new IllegalStateException("Insufficient funds. Available: " + sender.getBalance());
+            throw new IllegalStateException("Insufficient funds. Available: " + String.format("%,.2f", sender.getBalance()));
         }
 
         // 5. Update balances
