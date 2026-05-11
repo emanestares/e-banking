@@ -174,31 +174,31 @@
     </div>
     <nav class="sidebar-nav">
       <ul>
-        <li ng-class="{active: currentPage==='dashboard'}">
+        <li ng-class="{active: currentPage==='dashboard'}" ng-if="!isAdmin()">
           <a ng-click="navigate('dashboard')">
             <i class="fas fa-gauge-high"></i>
             <span>Dashboard</span>
           </a>
         </li>
-        <li ng-class="{active: currentPage==='accounts'}">
+        <li ng-class="{active: currentPage==='accounts'}" ng-if="!isAdmin()">
           <a ng-click="navigate('accounts')">
             <i class="fas fa-credit-card"></i>
             <span>My Accounts</span>
           </a>
         </li>
-        <li ng-class="{active: currentPage==='transfer'}">
+        <li ng-class="{active: currentPage==='transfer'}" ng-if="!isAdmin()">
           <a ng-click="navigate('transfer')">
             <i class="fas fa-arrow-right-arrow-left"></i>
             <span>Transfer Funds</span>
           </a>
         </li>
-        <li ng-class="{active: currentPage==='transactions'}">
+        <li ng-class="{active: currentPage==='transactions'}" ng-if="!isAdmin()">
           <a ng-click="navigate('transactions')">
             <i class="fas fa-clock-rotate-left"></i>
             <span>Transactions</span>
           </a>
         </li>
-        <li ng-class="{active: currentPage==='enroll'}">
+        <li ng-class="{active: currentPage==='enroll'}" ng-if="!isAdmin()">
           <a ng-click="navigate('enroll')">
             <i class="fas fa-circle-plus"></i>
             <span>Enroll Account</span>
@@ -321,7 +321,8 @@
                   <div class="balance-amount">{{ acc.balance | currency:'₱' }}</div>
                 </div>
               </div>
-                <div class="account-card ellipsis-row" ng-if="accounts.length > 5" ng-click="navigate('accounts')" style="cursor: pointer; justify-content: center; background: var(--gray-50); border: 1px dashed var(--gray-300);">                <div style="text-align: center; color: var(--gray-500); padding: 0.5rem;">
+              <div class="account-card ellipsis-row" ng-if="accounts.length > 5" ng-click="currentPage='accounts'" style="cursor: pointer; justify-content: center; background: var(--gray-50); border: 1px dashed var(--gray-300);">
+                <div style="text-align: center; color: var(--gray-500); padding: 0.5rem;">
                   <i class="fas fa-ellipsis-h"></i>
                   <span style="font-size: 0.85rem; display: block;">+{{ accounts.length - 5 }} more accounts. Click view all for the other accounts</span>
                 </div>
