@@ -15,7 +15,6 @@ public class EnrollRequest {
     private String purpose;
 
     @NotNull(message = "Initial deposit is required and not negative")
-    @DecimalMax(value = "10000000", message = "Initial deposit must not exceed 10 million")
     @Positive(message = "Amount must be a positive value")
     @DecimalMin(value = "0.00", message = "Deposit cannot be negative")
     private BigDecimal initialDeposit;

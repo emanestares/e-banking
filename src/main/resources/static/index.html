@@ -47,9 +47,6 @@
     <div class="login-footer">
       <a href="#" ng-click="goToSignup()">
         <i class="fas fa-user-plus"></i> Create Account </a>
-      <span class="divider">|</span>
-      <a href="#">
-        <i class="fas fa-headset"></i> Support </a>
     </div>
   </div>
   <div class="login-info">
@@ -594,15 +591,15 @@
                   <i class="fas fa-money-bill-wave"></i> Transfer Details
                 </div>
                 <div class="form-group">
-                  <!-- 1. Label highlights and asterisk for amount -->
+
                   <label ng-class="{'label-error': transferFieldErrors.amount}"> Amount (&#8369;) <span class="required-asterisk" ng-if="transferFieldErrors.amount">*</span>
                   </label>
-                  <!-- 2. Amount Input with validation styling -->
+
                   <div class="amount-input-wrap" ng-class="{'is-invalid': transferFieldErrors.amount}">
                     <span class="amount-prefix">&#8369;</span>
                     <input type="number" ng-model="transfer.amount" class="form-control amount-input" ng-class="{'is-invalid': transferFieldErrors.amount}" placeholder="0.00" min="1" step="0.01">
                   </div>
-                  <!-- 3. Validation message from GlobalExceptionHandler -->
+
                   <small class="text-danger" ng-if="transferFieldErrors.amount">
                     {{ transferFieldErrors.amount }}
                   </small>
@@ -723,13 +720,17 @@
           </div>
         </div>
       </div>
+
       <div ng-if="currentPage==='admin' && isAdmin()">
         <div class="admin-tabs">
           <button class="tab-btn" ng-class="{active: adminTab==='accounts'}" ng-click="adminTab='accounts'; loadAdminAccounts()">
             <i class="fas fa-wallet"></i> All Accounts </button>
           <button class="tab-btn" ng-class="{active: adminTab==='transactions'}" ng-click="adminTab='transactions'; loadAdminTransactions()">
             <i class="fas fa-arrow-right-arrow-left"></i> All Transactions </button>
+          <button class="tab-btn" ng-class="{active: adminTab==='limiters'}" ng-click="adminTab='limiters'; loadAdminLimiters()">
+            <i class="fas fa-shield-halved"></i> Limiters </button>
         </div>
+
         <div class="card" ng-if="adminTab==='accounts'">
           <div class="card-header">
             <h3>
@@ -766,9 +767,9 @@
                     <strong>{{ a.balance | currency:'₱' }}</strong>
                   </td>
                   <td>
-                          <span class="badge" ng-class="a.isActive?'badge-active':'badge-inactive'">
-                            {{ a.isActive?'Active':'Inactive' }}
-                          </span>
+                    <span class="badge" ng-class="a.isActive?'badge-active':'badge-inactive'">
+                      {{ a.isActive?'Active':'Inactive' }}
+                    </span>
                   </td>
                   <td>{{ a.createdAt | date:'MMM d, y' }}</td>
                 </tr>
@@ -793,6 +794,7 @@
             </div>
           </div>
         </div>
+
         <div class="card" ng-if="adminTab==='transactions'">
           <div class="card-header">
             <h3>
@@ -858,7 +860,90 @@
             </div>
           </div>
         </div>
+
+        <!-- limiters section -->
+        <div class="card" ng-if="adminTab==='limiters'">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-shield-halved"></i> System Transaction Limits
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-success" ng-if="limiterSuccess" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; width: 100%;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-check-circle"></i>
+                <span>{{ limiterSuccess.message || 'Constraint modified successfully.' }}</span>
+              </div>
+
+              <div class="txn-detail-box" ng-if="limiterSuccess.data" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <div style="display: flex; gap: 0.5rem;">
+                  <span>System Configuration Key:</span>
+                  <strong>{{ limiterSuccess.data.limiterKey }}</strong>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                  <span>Max Value:</span>
+                  <strong>₱{{ (limiterSuccess.data.limiterValue * 1) | number:2 }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-danger" ng-if="limiterError" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; width: 100%;">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>{{ limiterError }}</span>
+            </div>
+
+            <div ng-if="loadingAdminLimiters" class="text-center py-4 text-muted">
+              <i class="fas fa-spinner fa-spin"></i> Pulling global configuration rules...
+            </div>
+
+            <div class="table-responsive" ng-if="!loadingAdminLimiters">
+              <table class="data-table">
+                <thead>
+                <tr>
+                  <th>Limit Type Description</th>
+                  <th>System Configuration Key</th>
+                  <th style="width: 220px;">Max Value (₱)</th>
+                  <th style="text-align: right; width: 100px;">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="limiter in adminLimiters">
+                  <td>
+                    <strong>{{ limiter.description || 'System Limiter Configuration Rule' }}</strong>
+                  </td>
+                  <td>
+                    <code>{{ limiter.limiterKey }}</code>
+                  </td>
+                  <td>
+                    <div class="input-group" style="margin: 0; width: 100%;">
+                      <input type="number"
+                             class="form-control form-control-sm"
+                             ng-model="limiter.limiterValue"
+                             string-to-number
+                             min="100"
+                             step="0.01">
+                    </div>
+                  </td>
+                  <td style="text-align: right; vertical-align: middle;">
+                    <button class="btn btn-sm btn-primary" ng-click="updateLimiter(limiter)" style="width: 100%;">
+                      <i class="fas fa-save"></i> Save
+                    </button>
+                  </td>
+                </tr>
+
+                <tr ng-if="!adminLimiters || adminLimiters.length === 0">
+                  <td colspan="4" class="text-center text-muted py-4">
+                    <i class="fas fa-circle-info"></i> No system limiters found. Fill up the SQL database schema.
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
       </div>
+
       <!-- ENROLL ACCOUNT PAGE -->
       <div ng-if="currentPage==='enroll'">
         <div class="enroll-page-wrap">

@@ -1,6 +1,7 @@
 package com.example.banking.controller;
 
 import com.example.banking.dto.ApiResponse;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -92,5 +93,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest()
                 .body(new ApiResponse<>(false, errorMessage, errors));
+    }
+
+    @Getter
+    public class CustomValidationException extends RuntimeException {
+        private final String fieldName;
+
+        public CustomValidationException(String fieldName, String message) {
+            super(message);
+            this.fieldName = fieldName;
+        }
+    }
+
+    @ExceptionHandler(CustomValidationException.class)
+    public ResponseEntity<?> handleCustomValidation(CustomValidationException ex) {
+        // Returns {"initialDeposit": "Error message"} so AngularJS directly picks it up
+        return ResponseEntity.badRequest().body(Map.of(ex.getFieldName(), ex.getMessage()));
     }
 }

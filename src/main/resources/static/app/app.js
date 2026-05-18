@@ -3,12 +3,9 @@ angular.module('bankingApp', [])
 .controller('AppController', function($scope, $http, $interval, $filter) {
 
   //page state
-
-
   $scope.txnCurrentPage = 1;
   $scope.adminAccCurrentPage = 1;
   $scope.adminTxnCurrentPage = 1;
-
 
   // ── State ──────────────────────────────────────────────────
   $scope.isLoggedIn       = false;
@@ -72,12 +69,28 @@ angular.module('bankingApp', [])
   $scope.filteredAdminAccounts = [];
   $scope.filteredAdminTransactions = [];
 
+  // Admin Limiters Initial Array Configuration State
+  $scope.adminLimiters = [];
+  $scope.loadingAdminLimiters = false;
+  $scope.savingLimiters = false;
+
+  $scope.limiterSuccess = null;
+  $scope.limiterError = null;
 
   // ── Helpers ────────────────────────────────────────────────
   var API = '/api';
 
   function authHeaders() {
     return { 'Authorization': 'Bearer ' + localStorage.getItem('jwt') };
+  }
+
+  // Safely extract limit threshold settings from the array cache
+  function getLimiterValueByKey(key, fallbackDefault) {
+    if (!angular.isArray($scope.adminLimiters)) return fallbackDefault;
+    var match = $scope.adminLimiters.find(function(l) {
+      return l.limiterKey === key;
+    });
+    return match ? parseFloat(match.limiterValue) : fallbackDefault;
   }
 
   function applySession(d) {
@@ -90,6 +103,7 @@ angular.module('bankingApp', [])
       accountNumber: d.accountNumber
     };
     $scope.isLoggedIn = true;
+    $scope.loadAdminLimiters();
     $scope.showSignup = false;
     var landingPage = (d.roles && d.roles.indexOf('ROLE_ADMIN') !== -1) ? 'admin' : 'dashboard';
     $scope.navigate(landingPage);
@@ -100,7 +114,6 @@ angular.module('bankingApp', [])
            $scope.currentUser.roles.indexOf('ROLE_ADMIN') !== -1;
   };
 
-  // Improved helper for all forms
   $scope.clearFieldError = function(fieldName, errorObjectName) {
       if ($scope[errorObjectName] && $scope[errorObjectName][fieldName]) {
           delete $scope[errorObjectName][fieldName];
@@ -125,6 +138,10 @@ angular.module('bankingApp', [])
     $scope.signupError = null;
     $scope.signupData  = {};
     $scope.signupFieldErrors = {};
+    // Ensure threshold criteria is fetched for anonymous onboarding checks
+    $http.get(API + '/auth/limiters-public').then(function(res) {
+       $scope.adminLimiters = res.data.data || [];
+    }).catch(angular.noop);
   };
 
   $scope.goToLogin = function () {
@@ -135,21 +152,24 @@ angular.module('bankingApp', [])
 
   $scope.signup = function () {
       $scope.signupError = null;
-
-      // 1. Reset field errors at the start of the attempt
       $scope.signupFieldErrors = {};
 
-      // 2. Perform local check for mismatch
-      var mismatch = false;
       if ($scope.signupData.password !== $scope.signupData.confirmPassword) {
           $scope.signupFieldErrors.confirmPassword = "Passwords do not match.";
           $scope.signupError = 'Please fix the highlighted errors.';
-          mismatch = true;
-          // DO NOT RETURN HERE. Let the code continue so the backend can also validate.
       }
 
-      $scope.signupLoading = true;
+      // Check registration thresholds against configuration variables safely
+      var maxStarterDeposit = getLimiterValueByKey('starterAccountLimit', 50000.00);
+      if (parseFloat($scope.signupData.initialDeposit || 0) > maxStarterDeposit) {
+          $scope.signupFieldErrors.initialDeposit = "Initial deposit exceeds allowed limit of ₱" + maxStarterDeposit.toFixed(2);
+          $scope.signupError = "Please fix the highlighted errors.";
+          return;
+      }
 
+      if ($scope.signupError) return;
+
+      $scope.signupLoading = true;
       var payload = {
           username: $scope.signupData.username,
           email: $scope.signupData.email,
@@ -159,17 +179,9 @@ angular.module('bankingApp', [])
       };
 
       $http.post(API + '/auth/signup', payload)
-          .then(function (res) {
-              // Use applySession to force a redirect and data reload
-              // This helper automatically sets tokens, user data,
-              // and calls navigate('dashboard'), which loads the accounts.
-              applySession(res.data.data);
-          })
-
+          .then(function (res) { applySession(res.data.data); })
           .catch(function (err) {
               if (err.data && err.data.data) {
-                  // Use angular.extend to MERGE the backend errors with our local mismatch error
-                  // This ensures "Passwords do not match" stays visible alongside DTO errors
                   angular.extend($scope.signupFieldErrors, err.data.data);
                   $scope.signupError = "Please fix the highlighted errors.";
               } else {
@@ -205,7 +217,6 @@ angular.module('bankingApp', [])
     if (page === 'accounts' || page === 'transfer' || page === 'enroll') { loadAccounts(); }
     if (page === 'transactions') { loadTransactions(); }
     if (page === 'admin') { $scope.adminTab = 'accounts'; $scope.loadAdminAccounts(); }
-
   };
 
   $scope.toggleSidebar = function () { $scope.sidebarCollapsed = !$scope.sidebarCollapsed; };
@@ -221,7 +232,6 @@ angular.module('bankingApp', [])
       .finally(function () { $scope.loadingAccounts = false; });
   }
 
-  // Public wrappers so buttons can call them
   $scope.loadAccountsPublic      = loadAccounts;
   $scope.loadTransactionsPublic  = loadTransactions;
   $scope.refreshDashboard        = function () { loadAccounts(); loadTransactions(); };
@@ -230,12 +240,10 @@ angular.module('bankingApp', [])
     $scope.loadingTxns = true;
     $http.get(API + '/transactions/my', { headers: authHeaders() })
       .then(function (res) {
-        // 1. Assign data once
         var data = res.data.data || [];
-              $scope.transactions = data;
-              $scope.recentTransactions = data;
+        $scope.transactions = data;
+        $scope.recentTransactions = data;
 
-        // 2. Calculate totals using the 'data' variable
         $scope.totalCredits = data
           .filter(function (t) { return t.direction === 'CREDIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
@@ -244,10 +252,8 @@ angular.module('bankingApp', [])
           .filter(function (t) { return t.direction === 'DEBIT'; })
           .reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
 
-        // 3. Update the filter for the table
         $scope.updateTxnFilter();
 
-        // 4. Build recipients list
         var seen = {};
         var myAccountNumbers = ($scope.accounts || []).map(function(a){ return a.accountNumber; });
         $scope.pastRecipients = [];
@@ -263,9 +269,7 @@ angular.module('bankingApp', [])
           }
         });
       })
-      .finally(function () {
-        $scope.loadingTxns = false;
-      });
+      .finally(function () { $scope.loadingTxns = false; });
   }
 
   // ── Autocomplete helpers ────────────────────────────────────
@@ -295,19 +299,9 @@ angular.module('bankingApp', [])
     }
   };
 
-  // Hide dropdown when the typed value exactly matches a known account number
-  // or when the field is long enough to be a committed account number (no partial match left)
   $scope.onRecipientChange = function (target) {
-    var val = target === 'transfer'
-      ? ($scope.transfer.receiverAccountNumber || '')
-      : ($scope.quickTransfer.receiverAccountNumber || '');
-
-    var exactMatch = $scope.pastRecipients.some(function (r) {
-      return r.accountNumber.toLowerCase() === val.toLowerCase();
-    });
-
-    // Also hide if val looks like a complete account number but not in our list
-    // (e.g. user typed it manually — 8+ chars with 'ACC-' prefix)
+    var val = target === 'transfer' ? ($scope.transfer.receiverAccountNumber || '') : ($scope.quickTransfer.receiverAccountNumber || '');
+    var exactMatch = $scope.pastRecipients.some(function (r) { return r.accountNumber.toLowerCase() === val.toLowerCase(); });
     var looksComplete = /^ACC-\S{4,}$/i.test(val.trim());
 
     if (exactMatch || looksComplete) {
@@ -320,7 +314,6 @@ angular.module('bankingApp', [])
   };
 
   $scope.hideTransferSuggestions = function () {
-    // Small delay so ng-mousedown on item fires first
     setTimeout(function () { $scope.$apply(function () { $scope.showTransferSuggestions = false; }); }, 150);
   };
   $scope.hideQuickSuggestions = function () {
@@ -336,8 +329,15 @@ angular.module('bankingApp', [])
   $scope.doTransfer = function () {
     $scope.transferError = $scope.transferSuccess = null;
     $scope.transferFieldErrors = {};
-    $scope.transferring = true;
 
+    var maxTransferLimit = getLimiterValueByKey('maxTransferAmount', 100000.00);
+    if (parseFloat($scope.transfer.amount || 0) > maxTransferLimit) {
+        $scope.transferFieldErrors.amount = "Transfer exceeds maximum allowed limit of ₱" + maxTransferLimit.toFixed(2);
+        $scope.transferError = "Transfer limit exceeded.";
+        return;
+    }
+
+    $scope.transferring = true;
     $http.post(API + '/transactions/transfer', $scope.transfer, { headers: authHeaders() })
       .then(function (res) {
         $scope.transferSuccess = { message: res.data.message, data: res.data.data };
@@ -367,6 +367,13 @@ angular.module('bankingApp', [])
 
       if (hasError) { $scope.quickTransferError = 'Please fill in required fields.'; return; }
 
+      var maxTransferLimit = getLimiterValueByKey('maxTransferAmount', 100000.00);
+      if (parseFloat($scope.quickTransfer.amount || 0) > maxTransferLimit) {
+          $scope.quickTransferFieldErrors.amount = true;
+          $scope.quickTransferError = "Transfer exceeds maximum allowed limit.";
+          return;
+      }
+
       $scope.transferring = true;
       $http.post(API + '/transactions/transfer', $scope.quickTransfer, { headers: authHeaders() })
         .then(function (res) {
@@ -381,29 +388,21 @@ angular.module('bankingApp', [])
         .finally(function () { $scope.transferring = false; });
   };
 
-    // ── Clear Transaction ──────────────────────────────────────
-    $scope.clearTransfer = function() {
-      // 1. Reset data models
-      $scope.transfer = {};
-      $scope.quickTransfer = {};
-      $scope.senderBalance = null;
-
-      // 2. Clear UI flags
-      $scope.transferRecipientPicked = false;
-      $scope.quickRecipientPicked = false;
-      $scope.showTransferSuggestions = false;
-      $scope.showQuickSuggestions = false;
-
-      // 3. clear all error/success messages
-      $scope.transferError = null;
-      $scope.transferSuccess = null;
-      $scope.quickTransferError = null;
-      $scope.quickTransferSuccess = null;
-
-      // 4. Clear field-specific validation errors like transfer and quicktransfer sections
-      $scope.transferFieldErrors = {};
-      $scope.quickTransferFieldErrors = {};
-    };
+  $scope.clearTransfer = function() {
+    $scope.transfer = {};
+    $scope.quickTransfer = {};
+    $scope.senderBalance = null;
+    $scope.transferRecipientPicked = false;
+    $scope.quickRecipientPicked = false;
+    $scope.showTransferSuggestions = false;
+    $scope.showQuickSuggestions = false;
+    $scope.transferError = null;
+    $scope.transferSuccess = null;
+    $scope.quickTransferError = null;
+    $scope.quickTransferSuccess = null;
+    $scope.transferFieldErrors = {};
+    $scope.quickTransferFieldErrors = {};
+  };
 
   // ── Enroll Account ─────────────────────────────────────────
   $scope.doEnroll = function () {
@@ -431,157 +430,171 @@ angular.module('bankingApp', [])
   $scope.resetEnroll = function () { $scope.enrollData = { accountType: 'SAVINGS' }; $scope.enrollError = $scope.enrollSuccess = null; };
 
   // ── Pagination & Search Logic ──────────────────────────────
-    $scope.txnPageSize = 5;
-    $scope.adminAccPageSize = 5;
-    $scope.adminTxnPageSize = 5;
+  $scope.txnPageSize = 5;
+  $scope.adminAccPageSize = 5;
+  $scope.adminTxnPageSize = 5;
 
-    $scope.accCurrentPage = 1;
-    $scope.accPageSize = 4; // 4 for atm card grid
-    $scope.Math = window.Math; // Helper for HTML templates
+  $scope.accCurrentPage = 1;
+  $scope.accPageSize = 4;
+  $scope.Math = window.Math;
 
-    $scope.getPageNumbers = function(totalItems, pageSize) {
-        var totalPages = Math.ceil(totalItems / pageSize) || 0;
-        var pages = [];
-        for (var i = 1; i <= totalPages; i++) {
-            pages.push(i);
-        }
-        return pages;
+  $scope.getPageNumbers = function(totalItems, pageSize) {
+      var totalPages = Math.ceil(totalItems / pageSize) || 0;
+      var pages = [];
+      for (var i = 1; i <= totalPages; i++) { pages.push(i); }
+      return pages;
+  };
+
+  $scope.paginate = function(data, currentPage, pageSize) {
+    if (!data) return [];
+    var begin = (currentPage - 1) * pageSize;
+    return data.slice(begin, begin + pageSize);
+  };
+
+  $scope.changePage = function(type, page) {
+    var mapping = {
+      'txn':      { current: 'txnCurrentPage',      filtered: 'filteredTransactions',      size: 'txnPageSize' },
+      'adminAcc': { current: 'adminAccCurrentPage', filtered: 'filteredAdminAccounts',     size: 'adminAccPageSize' },
+      'adminTxn': { current: 'adminTxnCurrentPage', filtered: 'filteredAdminTransactions', size: 'adminTxnPageSize' },
+      'acc':      { current: 'accCurrentPage',      filtered: 'accounts',                  size: 'accPageSize' }
     };
 
-    $scope.paginate = function(data, currentPage, pageSize) {
-      if (!data) return [];
-      var begin = (currentPage - 1) * pageSize;
-      return data.slice(begin, begin + pageSize);
-    };
+    var m = mapping[type];
+    if (!m) return;
 
-    $scope.changePage = function(type, page) {
-      var mapping = {
-        'txn':      { current: 'txnCurrentPage',      filtered: 'filteredTransactions',      size: 'txnPageSize' },
-        'adminAcc': { current: 'adminAccCurrentPage', filtered: 'filteredAdminAccounts',     size: 'adminAccPageSize' },
-        'adminTxn': { current: 'adminTxnCurrentPage', filtered: 'filteredAdminTransactions', size: 'adminTxnPageSize' },
-        'acc':      { current: 'accCurrentPage',      filtered: 'accounts',                  size: 'accPageSize' }
-      };
-
-      var m = mapping[type];
-      if (!m) return;
-
-      var totalPages = Math.ceil(($scope[m.filtered] || []).length / $scope[m.size]);
-
-      // Logic to update the page
-      if (page >= 1 && (totalPages === 0 || page <= totalPages)) {
-        $scope[m.current] = page;
-      }
-    };
-
-    // ── Search & Pagination Reset Logic ────────────────────────
-
-      // Replace the individual search variables with a search object
-      $scope.search = {
-          txn: '',
-          adminAcc: '',
-          adminTxn: ''
-      };
-
-      $scope.$watch('search.txn', function () {
-          $scope.updateTxnFilter();
-      });
-
-      $scope.$watch('search.adminAcc', function () {
-          $scope.updateAdminAccFilter();
-      });
-
-      $scope.$watch('search.adminTxn', function () {
-          $scope.updateAdminTxnFilter();
-      });
-
-      $scope.updateTxnFilter = function () {
-          $scope.txnCurrentPage = 1;
-          // Use the object property
-          var query = ($scope.search.txn || '').toLowerCase().trim();
-          var sourceData = $scope.transactions || [];
-
-          if (!query) {
-              $scope.filteredTransactions = sourceData;
-          } else {
-              $scope.filteredTransactions = sourceData.filter(function(t) {
-                  if (!t) return false;
-                  var ref = (t.referenceNumber || '').toLowerCase();
-                  var type = (t.transactionType || '').toLowerCase();
-                  var from = (t.senderAccountNumber || '').toLowerCase();
-                  var to = (t.receiverAccountNumber || '').toLowerCase();
-                  return ref.indexOf(query) !== -1 ||
-                         type.indexOf(query) !== -1 ||
-                         from.indexOf(query) !== -1 ||
-                         to.indexOf(query) !== -1;
-              });
-          }
-      };
-
-      $scope.updateAdminAccFilter = function () {
-          $scope.adminAccCurrentPage = 1;
-          var query = ($scope.search.adminAcc || '').toLowerCase().trim();
-          var sourceData = $scope.adminAccounts || [];
-
-          if (!query) {
-              $scope.filteredAdminAccounts = sourceData;
-          } else {
-              $scope.filteredAdminAccounts = sourceData.filter(function(a) {
-                  return (a.accountNumber || '').toLowerCase().includes(query) ||
-                         (a.ownerFullName || '').toLowerCase().includes(query) ||
-                         (a.ownerUsername || '').toLowerCase().includes(query);
-              });
-          }
-      };
-
-      $scope.updateAdminTxnFilter = function () {
-          $scope.adminTxnCurrentPage = 1;
-          var query = ($scope.search.adminTxn || '').toLowerCase().trim();
-          var sourceData = $scope.adminTransactions || [];
-
-          if (!query) {
-              $scope.filteredAdminTransactions = sourceData;
-          } else {
-              $scope.filteredAdminTransactions = sourceData.filter(function(t) {
-                  return (t.referenceNumber || '').toLowerCase().includes(query) ||
-                         (t.senderAccountNumber || '').toLowerCase().includes(query) ||
-                         (t.receiverAccountNumber || '').toLowerCase().includes(query) ||
-                         (t.transactionType || '').toLowerCase().includes(query);
-              });
-          }
-      };
-
-
-    // Watch for session changes
-    $scope.$watch('isLoggedIn', function (v) {
-      if (v) localStorage.setItem('bankingUser', JSON.stringify($scope.currentUser));
-      else localStorage.removeItem('bankingUser');
-    });
-
-    // ── Admin Loading ──────────────────────────────────────────
-    $scope.loadAdminAccounts = function () {
-      $scope.loadingAdminAccounts = true;
-      $http.get(API + '/admin/accounts', { headers: authHeaders() })
-        .then(res => { $scope.adminAccounts = res.data.data; $scope.updateAdminAccFilter(); })
-        .finally(() => $scope.loadingAdminAccounts = false);
-    };
-
-    $scope.loadAdminTransactions = function () {
-      $scope.loadingAdminTxns = true;
-      $http.get(API + '/admin/transactions', { headers: authHeaders() })
-        .then(res => { $scope.adminTransactions = res.data.data; $scope.updateAdminTxnFilter(); })
-        .finally(() => $scope.loadingAdminTxns = false);
-    };
-
-    // ── Auto-restore session ───────────────────────────────────
-    var savedToken = localStorage.getItem('jwt');
-    if (savedToken) {
-      $http.get(API + '/auth/health').then(() => {
-        var saved = localStorage.getItem('bankingUser');
-        if (saved) {
-          $scope.currentUser = JSON.parse(saved);
-          $scope.isLoggedIn = true;
-          $scope.navigate('dashboard');
-        }
-      }).catch(() => localStorage.removeItem('jwt'));
+    var totalPages = Math.ceil(($scope[m.filtered] || []).length / $scope[m.size]);
+    if (page >= 1 && (totalPages === 0 || page <= totalPages)) {
+      $scope[m.current] = page;
     }
+  };
+
+  // ── Search & Pagination Reset Logic ────────────────────────
+  $scope.search = { txn: '', adminAcc: '', adminTxn: '' };
+
+  $scope.$watch('search.txn', function () { $scope.updateTxnFilter(); });
+  $scope.$watch('search.adminAcc', function () { $scope.updateAdminAccFilter(); });
+  $scope.$watch('search.adminTxn', function () { $scope.updateAdminTxnFilter(); });
+
+  $scope.updateTxnFilter = function () {
+      $scope.txnCurrentPage = 1;
+      var query = ($scope.search.txn || '').toLowerCase().trim();
+      var sourceData = $scope.transactions || [];
+
+      if (!query) {
+          $scope.filteredTransactions = sourceData;
+      } else {
+          $scope.filteredTransactions = sourceData.filter(function(t) {
+              if (!t) return false;
+              return (t.referenceNumber || '').toLowerCase().indexOf(query) !== -1 ||
+                     (t.transactionType || '').toLowerCase().indexOf(query) !== -1 ||
+                     (t.senderAccountNumber || '').toLowerCase().indexOf(query) !== -1 ||
+                     (t.receiverAccountNumber || '').toLowerCase().indexOf(query) !== -1;
+          });
+      }
+  };
+
+  $scope.updateAdminAccFilter = function () {
+      $scope.adminAccCurrentPage = 1;
+      var query = ($scope.search.adminAcc || '').toLowerCase().trim();
+      var sourceData = $scope.adminAccounts || [];
+
+      if (!query) {
+          $scope.filteredAdminAccounts = sourceData;
+      } else {
+          $scope.filteredAdminAccounts = sourceData.filter(function(a) {
+              return (a.accountNumber || '').toLowerCase().includes(query) ||
+                     (a.ownerFullName || '').toLowerCase().includes(query) ||
+                     (a.ownerUsername || '').toLowerCase().includes(query);
+          });
+      }
+  };
+
+  $scope.updateAdminTxnFilter = function () {
+      $scope.adminTxnCurrentPage = 1;
+      var query = ($scope.search.adminTxn || '').toLowerCase().trim();
+      var sourceData = $scope.adminTransactions || [];
+
+      if (!query) {
+          $scope.filteredAdminTransactions = sourceData;
+      } else {
+          $scope.filteredAdminTransactions = sourceData.filter(function(t) {
+              return (t.referenceNumber || '').toLowerCase().includes(query) ||
+                     (t.senderAccountNumber || '').toLowerCase().includes(query) ||
+                     (t.receiverAccountNumber || '').toLowerCase().includes(query) ||
+                     (t.transactionType || '').toLowerCase().includes(query);
+          });
+      }
+  };
+
+  // ── Admin Loading ──────────────────────────────────────────
+  $scope.loadAdminAccounts = function () {
+    $scope.loadingAdminAccounts = true;
+    $http.get(API + '/admin/accounts', { headers: authHeaders() })
+      .then(res => { $scope.adminAccounts = res.data.data; $scope.updateAdminAccFilter(); })
+      .finally(() => $scope.loadingAdminAccounts = false);
+  };
+
+  $scope.loadAdminTransactions = function () {
+    $scope.loadingAdminTxns = true;
+    $http.get(API + '/admin/transactions', { headers: authHeaders() })
+      .then(res => { $scope.adminTransactions = res.data.data; $scope.updateAdminTxnFilter(); })
+      .finally(() => $scope.loadingAdminTxns = false);
+  };
+
+  // ── loading admin limiters data controller ───────────────────
+    $scope.loadAdminLimiters = function() {
+      $scope.loadingAdminLimiters = true;
+
+      $http.get(API + '/api/admin/limiters', { headers: authHeaders() })
+        .then(function(res) {
+           // The backend wraps the response array inside an ApiResponse 'data' property
+           $scope.adminLimiters = res.data.data || [];
+        })
+        .finally(() => $scope.loadingAdminLimiters = false);
+    };
+
+
+    $scope.updateLimiter = function(limiter) {
+
+        $scope.limiterSuccess = null;
+        $scope.limiterError = null;
+
+        if (!limiter.limiterValue || limiter.limiterValue < 100) {
+                   $scope.limiterError = "Limiter ceiling threshold limit value cannot be lower than ₱100.00";
+                   return;
+               }
+
+         $http.put(API + '/api/admin/limiters/' + limiter.id, limiter, { headers: authHeaders() })
+             .then(function(res) {
+                 if (res.data.success) {
+                     $scope.limiterSuccess = res.data;
+                     $scope.loadAdminLimiters();
+                 } else {
+                     alert("Error modifying system constraints: " + res.data.message);
+                 }
+             })
+             .catch(function(err) {
+                 var errorContext = (err.data && err.data.message) ? err.data.message : "System refused database config write.";
+                 alert("Error: " + errorContext);
+             });
+     };
+
+  // Watch for session changes
+  $scope.$watch('isLoggedIn', function (v) {
+    if (v) localStorage.setItem('bankingUser', JSON.stringify($scope.currentUser));
+    else localStorage.removeItem('bankingUser');
   });
+
+  // ── Auto-restore session ───────────────────────────────────
+  var savedToken = localStorage.getItem('jwt');
+  if (savedToken) {
+    $http.get(API + '/auth/health').then(() => {
+      var saved = localStorage.getItem('bankingUser');
+      if (saved) {
+        $scope.currentUser = JSON.parse(saved);
+        $scope.isLoggedIn = true;
+        $scope.navigate('dashboard');
+      }
+    }).catch(() => localStorage.removeItem('jwt'));
+  }
+});

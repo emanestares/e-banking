@@ -14,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,12 +23,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.example.banking.repository.LimiterRepository;
+
 @Service
 public class TransactionService {
 
     @Autowired private TransactionRepository transactionRepository;
     @Autowired private AccountRepository accountRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private LimiterRepository limiterRepository;
 
     // -------------------------------------------------------
     // FUND TRANSFER
@@ -39,6 +43,16 @@ public class TransactionService {
         if (request.getSenderAccountNumber().equals(request.getReceiverAccountNumber())) {
             throw new IllegalArgumentException("You cannot transfer money to the same account.");
         }
+
+        // ── DYNAMIC LIMITER CHECK ──────────────────────────────────────────
+        BigDecimal maxTransfer = limiterRepository.findByLimiterKey("MAX_TRANSFER_AMOUNT")
+                .map(l -> new BigDecimal(l.getLimiterValue()))
+                .orElse(new BigDecimal("10000000")); // Fallback if record missing
+
+        if (request.getAmount().compareTo(maxTransfer) > 0) {
+            throw new IllegalArgumentException("Transfer amount exceeds the maximum limit of " + String.format("%,.2f", maxTransfer));
+        }
+        // ───────────────────────────────────────────────────────────────────
 
         // 2. Fetch both accounts once (Using active-only lookup)
         Account sender = accountRepository.findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
