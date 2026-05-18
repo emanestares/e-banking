@@ -5,6 +5,7 @@ import com.example.banking.dto.TransferRequest;
 import com.example.banking.dto.TransferResponse;
 import com.example.banking.model.Account;
 import com.example.banking.model.Transaction;
+import com.example.banking.model.User;
 import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.TransactionRepository;
 import com.example.banking.repository.UserRepository;
@@ -13,11 +14,16 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import com.example.banking.repository.LimiterRepository;
 
 @Service
 public class TransactionService {
@@ -25,6 +31,7 @@ public class TransactionService {
     @Autowired private TransactionRepository transactionRepository;
     @Autowired private AccountRepository accountRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private LimiterRepository limiterRepository;
 
     // -------------------------------------------------------
     // FUND TRANSFER
@@ -32,44 +39,52 @@ public class TransactionService {
     @Transactional
     public TransferResponse transfer(TransferRequest request, String requestingUsername) {
 
+        // 1. Same-account check (Prevent unnecessary DB hits)
         if (request.getSenderAccountNumber().equals(request.getReceiverAccountNumber())) {
-            throw new IllegalArgumentException("Cannot transfer to the same account");
+            throw new IllegalArgumentException("You cannot transfer money to the same account.");
         }
 
-        Account sender = accountRepository
-                .findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
-                .orElseThrow(() -> new RuntimeException(
-                        "Sender account not found: " + request.getSenderAccountNumber()));
+        // ── DYNAMIC LIMITER CHECK ──────────────────────────────────────────
+        BigDecimal maxTransfer = limiterRepository.findByLimiterKey("MAX_TRANSFER_AMOUNT")
+                .map(l -> new BigDecimal(l.getLimiterValue()))
+                .orElse(new BigDecimal("10000000")); // Fallback if record missing
 
-        Account receiver = accountRepository
-                .findByAccountNumberAndIsActiveTrue(request.getReceiverAccountNumber())
-                .orElseThrow(() -> new RuntimeException(
-                        "Receiver account not found: " + request.getReceiverAccountNumber()));
+        if (request.getAmount().compareTo(maxTransfer) > 0) {
+            throw new IllegalArgumentException("Transfer amount exceeds the maximum limit of " + String.format("%,.2f", maxTransfer));
+        }
+        // ───────────────────────────────────────────────────────────────────
 
-        // Authorization: sender must belong to requesting user (unless admin)
+        // 2. Fetch both accounts once (Using active-only lookup)
+        Account sender = accountRepository.findByAccountNumberAndIsActiveTrue(request.getSenderAccountNumber())
+                .orElseThrow(() -> new NoSuchElementException("The source account does not exist or is inactive."));
+
+        Account receiver = accountRepository.findByAccountNumberAndIsActiveTrue(request.getReceiverAccountNumber())
+                .orElseThrow(() -> new NoSuchElementException("The destination account number does not exist or is inactive."));
+
+        // 3. Authorization: Ensure requester owns sender account (unless Admin)
         if (!sender.getUser().getUsername().equals(requestingUsername)) {
             boolean isAdmin = userRepository.findByUsername(requestingUsername)
                     .map(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN")))
                     .orElse(false);
             if (!isAdmin) {
-                throw new AccessDeniedException("You do not own this account");
+                throw new AccessDeniedException("You do not own this account.");
             }
         }
 
-        // Sufficient funds check
+        // 4. Sufficient funds check
         if (sender.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new IllegalStateException("Insufficient funds. Available: "
-                    + sender.getBalance() + ", Requested: " + request.getAmount());
+            throw new IllegalStateException("Insufficient funds. Available: " + String.format("%,.2f", sender.getBalance()));
         }
 
-        // Debit sender, credit receiver
+        // 5. Update balances
         sender.setBalance(sender.getBalance().subtract(request.getAmount()));
         receiver.setBalance(receiver.getBalance().add(request.getAmount()));
 
+        // Changes persist automatically due to @Transactional; explicit save ensures immediate flush
         accountRepository.save(sender);
         accountRepository.save(receiver);
 
-        // Create transaction record
+        // 6. Create transaction record
         String refNumber = generateReferenceNumber();
         Transaction txn = Transaction.builder()
                 .referenceNumber(refNumber)
@@ -83,7 +98,7 @@ public class TransactionService {
 
         transactionRepository.save(txn);
 
-        // Build response
+        // 7. Build Response
         TransferResponse response = new TransferResponse();
         response.setReferenceNumber(refNumber);
         response.setStatus("COMPLETED");
@@ -91,7 +106,7 @@ public class TransactionService {
         response.setSenderAccountNumber(sender.getAccountNumber());
         response.setReceiverAccountNumber(receiver.getAccountNumber());
         response.setDescription(request.getDescription());
-        response.setTransactionDate(txn.getCreatedAt());
+        response.setTransactionDate(txn.getCreatedAt() != null ? txn.getCreatedAt() : LocalDateTime.now());
         response.setNewSenderBalance(sender.getBalance());
         return response;
     }
@@ -138,17 +153,27 @@ public class TransactionService {
     // -------------------------------------------------------
     @Transactional(readOnly = true)
     public List<TransactionResponse> getTransactionsByUsername(String username) {
-        userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        List<Account> accounts = accountRepository.findByUserId(
-                userRepository.findByUsername(username).get().getId());
-
-        if (accounts.isEmpty()) return List.of();
-
-        return transactionRepository.findAllByAccountId(accounts.get(0).getId())
+        Set<Long> userAccountIds = accountRepository
+                .findActiveAccountsByUserId(user.getId())
                 .stream()
-                .map(t -> mapToResponse(t, accounts.get(0).getId()))
+                .map(Account::getId)
+                .collect(Collectors.toSet());
+
+        if (userAccountIds.isEmpty()) return List.of();
+
+        return transactionRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(t -> {
+                    // Determine perspective: DEBIT if the sender account belongs to this user
+                    Long perspectiveId = (t.getSenderAccount() != null &&
+                            userAccountIds.contains(t.getSenderAccount().getId()))
+                            ? t.getSenderAccount().getId()
+                            : (t.getReceiverAccount() != null ? t.getReceiverAccount().getId() : null);
+                    return mapToResponse(t, perspectiveId);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -174,6 +199,10 @@ public class TransactionService {
                 txn.getSenderAccount() != null ? txn.getSenderAccount().getAccountNumber() : null);
         resp.setReceiverAccountNumber(
                 txn.getReceiverAccount() != null ? txn.getReceiverAccount().getAccountNumber() : null);
+        resp.setSenderName(
+                txn.getSenderAccount() != null ? txn.getSenderAccount().getUser().getFullName() : null);
+        resp.setReceiverName(
+                txn.getReceiverAccount() != null ? txn.getReceiverAccount().getUser().getFullName() : null);
 
         // Determine DEBIT/CREDIT direction from perspective account
         if (perspectiveAccountId != null) {

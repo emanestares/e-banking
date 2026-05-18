@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#0b1529"/>
+  <!-- Gold gradient definitions -->
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0c168"/>
+      <stop offset="100%" stop-color="#c9a84c"/>
+    </linearGradient>
+  </defs>
+  <!-- Bank pillars (3 columns) -->
+  <rect x="14" y="28" width="8" height="22" rx="2" fill="url(#gold)" opacity="0.9"/>
+  <rect x="28" y="28" width="8" height="22" rx="2" fill="url(#gold)"/>
+  <rect x="42" y="28" width="8" height="22" rx="2" fill="url(#gold)" opacity="0.9"/>
+  <!-- Base line -->
+  <rect x="11" y="50" width="42" height="4" rx="2" fill="url(#gold)"/>
+  <!-- Roof / pediment -->
+  <polygon points="32,10 8,26 56,26" fill="url(#gold)"/>
+  <!-- Roof highlight -->
+  <polygon points="32,12 10,25 54,25" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+</svg>
