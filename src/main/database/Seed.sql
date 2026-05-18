@@ -27,7 +27,15 @@ INSERT INTO roles (id, name) VALUES
 (1, 'ROLE_ADMIN'),
 (2, 'ROLE_USER');
 SET IDENTITY_INSERT roles OFF;
- 
+
+
+-- =====================
+-- SYSTEM TRANSACTION CONFIGURATION LIMITERS
+-- =====================
+INSERT INTO limiters (limiter_key, limiter_value, description) VALUES
+('starterAccountLimit', '50000.00', 'Maximum initial opening deposit limit constraint allowed for anonymous signups.'),
+('maxTransferAmount', '100000.00', 'Maximum processing transaction value ceiling allowed for a single fund transfer execution.');
+
 -- =====================
 -- USERS
 -- =====================
